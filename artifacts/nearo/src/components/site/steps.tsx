@@ -22,7 +22,7 @@ const steps = [
 function StepsList() {
   return (
     <div>
-      <h2 className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
+      <h2 className="text-4xl font-medium tracking-tight text-zinc-900 sm:text-5xl">
         Get started in
         <br />
         3 simple steps.
@@ -36,10 +36,10 @@ function StepsList() {
                 1
               </span>
             )}
-            <p className="text-lg font-semibold text-zinc-900">
+            <p className="text-xl font-medium text-zinc-900">
               {step.title}
             </p>
-            <p className="mt-1 max-w-xs text-[13px] text-zinc-500">
+            <p className="mt-1 max-w-xs text-sm text-zinc-500">
               {step.description}
             </p>
           </li>

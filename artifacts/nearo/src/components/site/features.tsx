@@ -132,12 +132,12 @@ export function Features() {
   return (
     <section className="mx-auto max-w-7xl px-6 py-24 sm:px-8">
       <div className="mx-auto max-w-xl text-center">
-        <h2 className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
+        <h2 className="text-4xl font-medium tracking-tight text-zinc-900 sm:text-5xl">
           Features designed
           <br />
           for your success.
         </h2>
-        <p className="mt-4 text-[13px] text-zinc-500">
+        <p className="mt-4 text-sm text-zinc-500">
           Explore the features designed to
           <br />
           keep you organized and on track.

@@ -113,10 +113,10 @@ export function Hero() {
             DROPPING SOON
           </span>
 
-          <h1 className="mt-5 text-5xl font-bold tracking-tight text-white sm:text-7xl lg:text-8xl">
+          <h1 className="mt-5 text-4xl font-medium tracking-tight text-white sm:text-6xl lg:text-7xl">
             You're one tap away<br className="hidden sm:block" /> from focus
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-[14px] leading-relaxed text-white/85">
+          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/85">
             We're getting close. Sign up to get early access
             <br />
             to Nearo and start building your viral waitlist.
