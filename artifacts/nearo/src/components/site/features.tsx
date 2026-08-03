@@ -130,7 +130,7 @@ function GoalSettingMock() {
 
 export function Features() {
   return (
-    <section className="mx-auto max-w-[1920px] px-4 py-24 sm:px-6">
+    <section className="mx-auto max-w-7xl px-6 py-24 sm:px-8">
       <div className="mx-auto max-w-xl text-center">
         <h2 className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
           Features designed

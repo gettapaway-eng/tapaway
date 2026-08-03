@@ -99,7 +99,7 @@ function GetToWorkMock() {
 
 export function Steps() {
   return (
-    <section className="mx-auto max-w-[1920px] px-4 py-24 sm:px-6">
+    <section className="mx-auto max-w-7xl px-6 py-24 sm:px-8">
       <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-20">
         <StepsList />
         <div className="rounded-3xl bg-zinc-100 pt-4">

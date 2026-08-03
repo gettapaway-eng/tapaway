@@ -87,24 +87,25 @@ export function Hero() {
         }}
       >
         {/* Header — lean and compact like reference */}
-        <header className="relative z-20 flex w-full items-center justify-between px-4 pt-4 sm:px-6 sm:pt-5">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="7" width="20" height="14" rx="6" fill="#3b82f6" />
-                <rect x="10" y="1" width="4" height="5" rx="2" fill="#3b82f6" />
-                <circle cx="8.5" cy="14" r="2" fill="white" />
-                <circle cx="15.5" cy="14" r="2" fill="white" />
-              </svg>
-            </span>
-            <span className="text-[15px] font-semibold text-white">
-              Nearo
-            </span>
+        <header className="relative z-20 pt-4 sm:pt-5">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 sm:px-8">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <rect x="2" y="7" width="20" height="14" rx="6" fill="#3b82f6" />
+                  <rect x="10" y="1" width="4" height="5" rx="2" fill="#3b82f6" />
+                  <circle cx="8.5" cy="14" r="2" fill="white" />
+                  <circle cx="15.5" cy="14" r="2" fill="white" />
+                </svg>
+              </span>
+              <span className="text-[15px] font-semibold text-white">
+                Nearo
+              </span>
+            </div>
+            <button className="rounded-full bg-white px-5 py-2 text-[11px] font-semibold tracking-wide text-black shadow-sm transition-colors hover:bg-zinc-100 active:bg-zinc-200">
+              TEMLIS
+            </button>
           </div>
-
-          <button className="rounded-full bg-white px-5 py-2 text-[11px] font-semibold tracking-wide text-black shadow-sm transition-colors hover:bg-zinc-100 active:bg-zinc-200">
-            TEMLIS
-          </button>
         </header>
 
         <div className="relative z-10 mx-auto px-6 pt-8 text-center sm:pt-12">
