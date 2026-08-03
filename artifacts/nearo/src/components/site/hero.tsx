@@ -87,7 +87,7 @@ export function Hero() {
         }}
       >
         {/* Header — lean and compact like reference */}
-        <header className="relative z-20 flex w-full items-center justify-between px-5 pt-5 sm:px-8 sm:pt-6">
+        <header className="relative z-20 flex w-full items-center justify-between px-4 pt-4 sm:px-6 sm:pt-5">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
