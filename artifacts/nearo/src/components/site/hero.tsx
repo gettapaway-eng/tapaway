@@ -78,9 +78,9 @@ function HeroPhoneScreen() {
 
 export function Hero() {
   return (
-    <section className="bg-[#f5f5f5] px-4 pt-4 sm:px-8 sm:pt-8">
+    <section className="bg-white px-2 pt-2 sm:px-4 sm:pt-4">
       <div
-        className="relative mx-auto max-w-[1920px] overflow-hidden rounded-[28px]"
+        className="relative mx-auto max-w-[1920px] overflow-hidden rounded-2xl"
         style={{
           background:
             "radial-gradient(60% 50% at 50% 85%, #cfe1fb 0%, #9dc1f8 35%, #5f95f2 65%, #4a80ea 100%)",
