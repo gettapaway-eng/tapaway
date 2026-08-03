@@ -25,15 +25,15 @@ function HeroTaskCard({
       <div className="flex items-start gap-2.5">
         <CheckIcon done={done} />
         <div>
-          <p className="text-[14px] font-semibold text-zinc-900">{title}</p>
-          <p className="mt-0.5 text-[11px] text-zinc-400">{subtitle}</p>
-          <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-500">
+          <p className="text-base font-semibold text-zinc-900">{title}</p>
+          <p className="mt-0.5 text-xs text-zinc-400">{subtitle}</p>
+          <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-500">
             <span className="h-1 w-1 rounded-full bg-red-500" />
             High Priority
           </span>
         </div>
       </div>
-      <span className="shrink-0 rounded-md bg-zinc-100 px-2 py-1 text-[10px] font-medium text-zinc-500">
+      <span className="shrink-0 rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-500">
         {date}
       </span>
     </div>
@@ -43,8 +43,8 @@ function HeroTaskCard({
 function HeroPhoneScreen() {
   return (
     <div className="relative px-5 pb-10 pt-2">
-      <p className="text-[19px] font-bold text-zinc-900">My tasks</p>
-      <p className="mt-4 text-[10px] font-semibold tracking-wide text-zinc-400">
+      <p className="text-xl font-bold text-zinc-900">My tasks</p>
+      <p className="mt-4 text-xs font-semibold tracking-wide text-zinc-400">
         TOP PRIORITY
       </p>
       <div className="mt-2.5 space-y-3">
@@ -61,7 +61,7 @@ function HeroPhoneScreen() {
           done
         />
       </div>
-      <p className="mt-4 text-[10px] font-semibold tracking-wide text-zinc-400">
+      <p className="mt-4 text-xs font-semibold tracking-wide text-zinc-400">
         DUE TODAY
       </p>
       <div className="mt-2.5 space-y-3">
@@ -86,7 +86,6 @@ export function Hero() {
             "radial-gradient(60% 50% at 50% 85%, #cfe1fb 0%, #9dc1f8 35%, #5f95f2 65%, #4a80ea 100%)",
         }}
       >
-        {/* Header — lean and compact like reference */}
         <header className="relative z-20 pt-4 sm:pt-5">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 sm:px-8">
             <div className="flex items-center gap-2">
@@ -98,25 +97,25 @@ export function Hero() {
                   <circle cx="15.5" cy="14" r="2" fill="white" />
                 </svg>
               </span>
-              <span className="text-[15px] font-semibold text-white">
+              <span className="text-base font-semibold text-white">
                 Nearo
               </span>
             </div>
-            <button className="rounded-full bg-white px-5 py-2 text-[11px] font-semibold tracking-wide text-black shadow-sm transition-colors hover:bg-zinc-100 active:bg-zinc-200">
+            <button className="rounded-full bg-white px-5 py-2 text-xs font-semibold tracking-wide text-black shadow-sm transition-colors hover:bg-zinc-100 active:bg-zinc-200">
               TEMLIS
             </button>
           </div>
         </header>
 
         <div className="relative z-10 mx-auto px-6 pt-8 text-center sm:pt-12">
-          <span className="inline-block rounded-full border border-white/40 bg-white/10 px-4 py-1.5 text-[11px] font-medium tracking-wide text-white/90 backdrop-blur-md">
+          <span className="inline-block rounded-full border border-white/40 bg-white/10 px-4 py-1.5 text-xs font-medium tracking-wide text-white/90 backdrop-blur-md">
             DROPPING SOON
           </span>
 
-          <h1 className="mt-5 text-4xl font-medium tracking-tight text-white sm:text-6xl lg:text-7xl">
+          <h1 className="mt-5 text-5xl font-medium tracking-tight text-white sm:text-7xl lg:text-8xl">
             You're one tap away<br className="hidden sm:block" /> from focus
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/85">
+          <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-white/85">
             We're getting close. Sign up to get early access
             <br />
             to Nearo and start building your viral waitlist.
@@ -126,11 +125,11 @@ export function Hero() {
             <input
               type="email"
               placeholder="Your email address"
-              className="h-9 w-full min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/70 focus:outline-none"
+              className="h-9 w-full min-w-0 bg-transparent text-base text-white placeholder:text-white/70 focus:outline-none"
             />
             <button
               type="submit"
-              className="shrink-0 rounded-full bg-white px-6 py-2.5 text-[12px] font-semibold tracking-wide whitespace-nowrap text-black transition-colors hover:bg-zinc-100 active:bg-zinc-200"
+              className="shrink-0 rounded-full bg-white px-6 py-2.5 text-sm font-semibold tracking-wide whitespace-nowrap text-black transition-colors hover:bg-zinc-100 active:bg-zinc-200"
             >
               JOIN WAITLIST
             </button>

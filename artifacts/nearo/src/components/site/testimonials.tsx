@@ -41,12 +41,12 @@ function TestimonialCard({
         className={`h-20 w-20 shrink-0 rounded-2xl bg-gradient-to-br ${gradient}`}
       />
       <div className="flex flex-col justify-between">
-        <p className="text-[12px] leading-relaxed text-zinc-700">
+        <p className="text-sm leading-relaxed text-zinc-700">
           &ldquo;{quote}&rdquo;
         </p>
         <div className="mt-3">
-          <p className="text-[12px] font-semibold text-zinc-900">{name}</p>
-          <p className="text-[11px] text-zinc-500">{role}</p>
+          <p className="text-sm font-semibold text-zinc-900">{name}</p>
+          <p className="text-xs text-zinc-500">{role}</p>
         </div>
       </div>
     </div>
@@ -57,12 +57,12 @@ export function Testimonials() {
   return (
     <section className="mx-auto max-w-7xl px-6 py-24 sm:px-8">
       <div className="mx-auto max-w-xl text-center">
-        <h2 className="text-4xl font-medium tracking-tight text-zinc-900 sm:text-5xl">
+        <h2 className="text-5xl font-medium tracking-tight text-zinc-900 sm:text-6xl">
           What our beta
           <br />
           clients are saying
         </h2>
-        <p className="mt-4 text-sm text-zinc-500">
+        <p className="mt-4 text-base text-zinc-500">
           Our financial management platform is transforming the way people
           manage their money. Here&apos;s what some of our users have to say
           about their experience.

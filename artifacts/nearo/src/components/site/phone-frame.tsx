@@ -50,7 +50,7 @@ export function PhoneFrame({
 
 export function StatusBar() {
   return (
-    <div className="flex items-center justify-between px-7 pb-2 pt-12 text-[13px] font-semibold text-black">
+    <div className="flex items-center justify-between px-7 pb-2 pt-12 text-sm font-semibold text-black">
       <span>9:41</span>
       <div className="flex items-center gap-1.5">
         <svg width="17" height="12" viewBox="0 0 14 10" fill="currentColor">

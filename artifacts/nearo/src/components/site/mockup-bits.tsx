@@ -25,7 +25,7 @@ export function CheckIcon({ done = true }: { done?: boolean }) {
 
 export function PriorityBadge() {
   return (
-    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-medium text-red-500">
+    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-500">
       <span className="h-1 w-1 rounded-full bg-red-500" />
       High Priority
     </span>
@@ -52,19 +52,19 @@ export function TaskRow({
         <div>
           <p
             className={cn(
-              "text-[12px] font-semibold text-zinc-900",
+              "text-sm font-semibold text-zinc-900",
               strike && "text-zinc-400 line-through",
             )}
           >
             {title}
           </p>
           {subtitle && (
-            <p className="text-[10px] text-zinc-400">{subtitle}</p>
+            <p className="text-xs text-zinc-400">{subtitle}</p>
           )}
           {!strike && <PriorityBadge />}
         </div>
       </div>
-      {date && <span className="text-[10px] text-zinc-400">{date}</span>}
+      {date && <span className="text-xs text-zinc-400">{date}</span>}
     </div>
   );
 }

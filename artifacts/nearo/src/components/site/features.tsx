@@ -16,8 +16,8 @@ function FeatureCard({
         {children}
       </div>
       <div className="mt-6 border-t border-zinc-200/70 bg-white px-8 py-7 text-center">
-        <p className="text-[15px] font-semibold text-zinc-900">{title}</p>
-        <p className="mt-1 text-[12px] text-zinc-500">{description}</p>
+        <p className="text-base font-semibold text-zinc-900">{title}</p>
+        <p className="mt-1 text-sm text-zinc-500">{description}</p>
       </div>
     </div>
   );
@@ -40,16 +40,16 @@ function TimeTrackingMock() {
   return (
     <PhoneFrame className="w-[220px]" screenClassName="min-h-[400px]">
       <div className="px-4 pt-1">
-        <p className="text-[9px] text-zinc-400">Thu, 20 February</p>
+        <p className="text-xs text-zinc-400">Thu, 20 February</p>
         <div className="mt-1 flex items-center justify-between">
-          <p className="text-[13px] font-bold text-zinc-900">
+          <p className="text-sm font-bold text-zinc-900">
             Good morning, Rona
           </p>
           <span className="text-sm">👋</span>
         </div>
         <div className="mt-3 flex items-center justify-between rounded-xl bg-zinc-900 px-3 py-2 text-white">
-          <span className="text-[9px] font-medium">Work this week</span>
-          <span className="text-[10px] font-semibold">12:09:07</span>
+          <span className="text-xs font-medium">Work this week</span>
+          <span className="text-xs font-semibold">12:09:07</span>
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2">
           {[
@@ -58,8 +58,8 @@ function TimeTrackingMock() {
             ["4", "Completed"],
           ].map(([n, l]) => (
             <div key={l} className="rounded-xl bg-zinc-100 p-2 text-center">
-              <p className="text-[13px] font-bold text-zinc-900">{n}</p>
-              <p className="text-[7px] text-zinc-400">{l}</p>
+              <p className="text-sm font-bold text-zinc-900">{n}</p>
+              <p className="text-xs text-zinc-400">{l}</p>
             </div>
           ))}
         </div>
@@ -76,16 +76,16 @@ function CollaborationMock() {
     <PhoneFrame className="w-[220px]" screenClassName="min-h-[400px]">
       <div className="px-4 pt-1">
         <div className="flex items-center justify-between">
-          <p className="text-[13px] font-bold text-zinc-900">My tasks</p>
+          <p className="text-sm font-bold text-zinc-900">My tasks</p>
           <div className="flex -space-x-1.5">
             <AvatarDot />
             <AvatarDot />
-            <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-zinc-900 text-[8px] font-semibold text-white">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-zinc-900 text-xs font-semibold text-white">
               +3
             </span>
           </div>
         </div>
-        <p className="mt-2 text-[9px] font-semibold tracking-wide text-zinc-400">
+        <p className="mt-2 text-xs font-semibold tracking-wide text-zinc-400">
           TOP PRIORITY
         </p>
         <TaskRow title="Final Design Review" subtitle="Produlis App" done />
@@ -101,8 +101,8 @@ function GoalSettingMock() {
       <div className="flex items-center gap-2">
         <span className="text-base">🏆</span>
         <div>
-          <p className="text-[9px] text-zinc-400">Goals</p>
-          <p className="text-[12px] font-semibold text-zinc-900">
+          <p className="text-xs text-zinc-400">Goals</p>
+          <p className="text-sm font-semibold text-zinc-900">
             Rona Zepri
           </p>
         </div>
@@ -114,10 +114,10 @@ function GoalSettingMock() {
           ["Projects", "5", "10"],
         ].map(([label, done, total]) => (
           <div key={label} className="rounded-xl bg-zinc-50 p-2 text-center">
-            <p className="text-[8px] text-zinc-400">{label}</p>
-            <p className="text-[12px] font-bold text-zinc-900">
+            <p className="text-xs text-zinc-400">{label}</p>
+            <p className="text-sm font-bold text-zinc-900">
               {done}
-              <span className="text-[9px] font-normal text-zinc-400">
+              <span className="text-xs font-normal text-zinc-400">
                 /{total}
               </span>
             </p>
@@ -132,12 +132,12 @@ export function Features() {
   return (
     <section className="mx-auto max-w-7xl px-6 py-24 sm:px-8">
       <div className="mx-auto max-w-xl text-center">
-        <h2 className="text-4xl font-medium tracking-tight text-zinc-900 sm:text-5xl">
+        <h2 className="text-5xl font-medium tracking-tight text-zinc-900 sm:text-6xl">
           Features designed
           <br />
           for your success.
         </h2>
-        <p className="mt-4 text-sm text-zinc-500">
+        <p className="mt-4 text-base text-zinc-500">
           Explore the features designed to
           <br />
           keep you organized and on track.
