@@ -109,8 +109,8 @@ export function Hero() {
         </header>
 
         <div className="relative z-10 mx-auto px-6 pt-8 text-center sm:pt-12">
-          <span className="inline-block rounded-full border border-white/40 px-4 py-1.5 text-[11px] font-medium tracking-wide text-white/90">
-            COMING SOON
+          <span className="inline-block rounded-full border border-white/40 bg-white/10 px-4 py-1.5 text-[11px] font-medium tracking-wide text-white/90 backdrop-blur-md">
+            DROPPING SOON
           </span>
 
           <h1 className="mt-5 text-5xl font-bold tracking-tight text-white sm:text-7xl lg:text-8xl">
