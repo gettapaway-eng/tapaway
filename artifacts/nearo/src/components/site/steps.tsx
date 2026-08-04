@@ -1,4 +1,9 @@
-import { Reveal, RevealGroup, RevealItem, WordReveal } from "@/components/site/motion";
+import {
+  Reveal,
+  RevealGroup,
+  RevealItem,
+  WordReveal,
+} from "@/components/site/motion";
 
 const steps = [
   {
@@ -32,9 +37,7 @@ function StepCard({
 }) {
   return (
     <div>
-      <div className="overflow-hidden rounded-3xl bg-zinc-100">
-        {children}
-      </div>
+      <div className="overflow-hidden rounded-3xl bg-zinc-100">{children}</div>
       <p className="mt-5 text-lg font-semibold text-zinc-900">{title}</p>
       <p className="mt-1.5 text-base leading-relaxed text-zinc-500">
         {description}
@@ -45,7 +48,7 @@ function StepCard({
 
 export function Steps() {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-24 sm:px-8">
+    <section className="mx-auto max-w-7xl px-6 py-10 sm:px-8 sm:py-24">
       <div className="flex flex-col gap-12 md:flex-row md:items-start md:gap-20">
         <div className="md:sticky md:top-28 md:flex-1">
           <h2 className="text-3xl font-medium tracking-tight text-zinc-900 sm:text-5xl">
@@ -59,7 +62,7 @@ export function Steps() {
         </div>
 
         <RevealGroup
-          className="relative space-y-16 border-l border-dashed border-zinc-300 pl-8 md:flex-1"
+          className="relative space-y-12 sm:space-y-16 border-l border-dashed border-zinc-300 pl-8 md:flex-1"
           stagger={0.15}
         >
           {steps.map((step, i) => (

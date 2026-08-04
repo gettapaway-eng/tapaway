@@ -1,4 +1,9 @@
-import { Reveal, RevealGroup, RevealItem, WordReveal } from "@/components/site/motion";
+import {
+  Reveal,
+  RevealGroup,
+  RevealItem,
+  WordReveal,
+} from "@/components/site/motion";
 import { LazyVideo } from "@/components/site/lazy-video";
 
 const cards = [
@@ -17,15 +22,15 @@ const cards = [
 
 export function Features() {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-24 sm:px-8">
+    <section className="mx-auto max-w-7xl px-6 py-10 sm:py-24 sm:px-8">
       <div className="mx-auto max-w-xl text-center">
         <h2 className="text-3xl font-medium tracking-tight text-zinc-900 sm:text-5xl">
           <WordReveal lines={["A physical key to focus."]} />
         </h2>
         <Reveal delay={0.1}>
           <p className="mt-4 text-lg text-zinc-500">
-            TapAway uses a physical NFC device to lock distracting apps,
-            helping you focus on what matters.
+            TapAway uses a physical NFC device to lock distracting apps, helping
+            you focus on what matters.
           </p>
         </Reveal>
       </div>
