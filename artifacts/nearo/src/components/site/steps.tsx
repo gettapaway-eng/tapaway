@@ -1,98 +1,44 @@
-import { PhoneFrame } from "@/components/site/phone-frame";
-import { TaskRow } from "@/components/site/mockup-bits";
+import { Reveal, RevealGroup, RevealItem, WordReveal } from "@/components/site/motion";
 
 const steps = [
   {
-    title: "Download the app.",
+    title: "Choose Apps",
     description:
-      "Explore the features designed to keep you organized and on track.",
+      "Select Instagram, X, Reddit, YouTube or any apps you want blocked.",
+    image: "blockapps.png",
   },
   {
-    title: "Set up your workspace.",
+    title: "Tap Phone",
     description:
-      "Explore the features designed to keep you organized and on track.",
+      "Tap your phone on the TapAway device to block the apps and activate focus mode.",
+    image: "tapdevice.png",
   },
   {
-    title: "Get to work.",
+    title: "Live Fully",
     description:
-      "Explore the features designed to keep you organized and on track.",
+      "Feel 95% less distracted — turn your phone back into a tool that supports your goals.",
+    image: "zero distracted.png",
   },
 ];
 
-function StepsList() {
+function StepCard({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
-      <h2 className="text-5xl font-medium tracking-tight text-zinc-900 sm:text-6xl">
-        Get started in
-        <br />
-        3 simple steps.
-      </h2>
-
-      <ol className="relative mt-10 space-y-10 border-l border-dashed border-zinc-300 pl-8">
-        {steps.map((step, i) => (
-          <li key={step.title} className="relative">
-            {i === 0 && (
-              <span className="absolute -left-[41px] top-0 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">
-                1
-              </span>
-            )}
-            <p className="text-2xl font-medium text-zinc-900">
-              {step.title}
-            </p>
-            <p className="mt-1 max-w-xs text-base text-zinc-500">
-              {step.description}
-            </p>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-function GetToWorkMock() {
-  return (
-    <div className="relative flex justify-center pb-6 pt-10">
-      <div className="absolute -top-2 left-1/2 z-20 flex -translate-x-1/2 gap-2">
-        <span className="rounded-full bg-black px-3 py-1.5 text-xs font-semibold text-white shadow-lg">
-          App store
-        </span>
-        <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-900 shadow-lg">
-          Play store
-        </span>
+      <div className="overflow-hidden rounded-3xl bg-zinc-100">
+        {children}
       </div>
-
-      <PhoneFrame className="w-[220px]" screenClassName="min-h-[380px]">
-        <div className="px-4 pt-1">
-          <p className="text-xs text-zinc-400">Thu, 20 February</p>
-          <div className="mt-1 flex items-center justify-between">
-            <p className="text-sm font-bold text-zinc-900">
-              Good morning, Rona
-            </p>
-            <span className="text-sm">👋</span>
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {[
-              ["10", "Consistent"],
-              ["0", "Overdue"],
-              ["4", "Completed"],
-            ].map(([n, l]) => (
-              <div key={l} className="rounded-xl bg-zinc-100 p-2 text-center">
-                <p className="text-sm font-bold text-zinc-900">{n}</p>
-                <p className="text-xs text-zinc-400">{l}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </PhoneFrame>
-
-      <div className="absolute bottom-2 left-[calc(50%+30px)] w-[170px] rounded-2xl bg-white p-3 shadow-xl">
-        <p className="mb-1 text-xs font-semibold text-zinc-900">
-          Get to work
-        </p>
-        <TaskRow title="Final Design Review" done />
-        <TaskRow title="Landing page" />
-        <TaskRow title="Wireframe Homepage" />
-      </div>
+      <p className="mt-5 text-lg font-semibold text-zinc-900">{title}</p>
+      <p className="mt-1.5 text-base leading-relaxed text-zinc-500">
+        {description}
+      </p>
     </div>
   );
 }
@@ -100,19 +46,37 @@ function GetToWorkMock() {
 export function Steps() {
   return (
     <section className="mx-auto max-w-7xl px-6 py-24 sm:px-8">
-      <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-20">
-        <StepsList />
-        <div className="rounded-3xl bg-zinc-100 pt-4">
-          <GetToWorkMock />
-          <div className="border-t border-zinc-200/70 bg-white px-8 py-7 text-center rounded-b-3xl">
-            <p className="text-base font-semibold text-zinc-900">
-              Get to work
+      <div className="flex flex-col gap-12 md:flex-row md:gap-20">
+        <div className="md:sticky md:top-28 md:flex-1">
+          <h2 className="text-3xl font-medium tracking-tight text-zinc-900 sm:text-5xl">
+            <WordReveal lines={["Get started in", "3 simple steps."]} />
+          </h2>
+          <Reveal delay={0.1}>
+            <p className="mt-4 max-w-sm text-lg text-zinc-500">
+              Three steps between you and a distraction-free phone.
             </p>
-            <p className="mt-1 text-sm text-zinc-500">
-              Organize your tasks, track progress, and achieve more.
-            </p>
-          </div>
+          </Reveal>
         </div>
+
+        <RevealGroup
+          className="relative space-y-16 border-l border-dashed border-zinc-300 pl-8 md:flex-1"
+          stagger={0.15}
+        >
+          {steps.map((step, i) => (
+            <RevealItem key={step.title} className="relative">
+              <span className="absolute -left-[49px] top-0 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900 text-sm font-semibold text-white">
+                {i + 1}
+              </span>
+              <StepCard title={step.title} description={step.description}>
+                <img
+                  src={`${import.meta.env.BASE_URL}${encodeURIComponent(step.image)}`}
+                  alt={step.title}
+                  className="aspect-square w-full object-cover"
+                />
+              </StepCard>
+            </RevealItem>
+          ))}
+        </RevealGroup>
       </div>
     </section>
   );

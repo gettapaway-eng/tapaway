@@ -93,7 +93,7 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  --font-sans-family: 'Geist', sans-serif;
+  --font-sans-family: 'Manrope', sans-serif;
   --font-mono-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -141,5 +141,10 @@
   }
   html {
     font-family: var(--font-sans-family);
+  }
+  button:not(:disabled),
+  input:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
   }
 }
