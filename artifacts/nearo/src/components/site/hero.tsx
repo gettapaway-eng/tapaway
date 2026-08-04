@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Reveal, WordReveal, easeSmooth } from "@/components/site/motion";
 import { Logomark } from "@/components/site/logo";
+import { WaitlistForm } from "@/components/site/waitlist-form";
 
 export function Hero() {
   return (
@@ -59,19 +60,7 @@ export function Hero() {
           </p>
 
           <Reveal delay={1.15}>
-            <form className="mx-auto mt-8 flex max-w-lg items-center rounded-full border border-white/40 bg-white/10 p-1.5 pl-6 backdrop-blur-sm transition-colors focus-within:border-white/60 focus-within:bg-white/15">
-              <input
-                type="email"
-                placeholder="Your email address"
-                className="h-9 w-full min-w-0 bg-transparent text-base text-white placeholder:text-white/70 focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="shrink-0 rounded-full bg-white px-6 py-2.5 text-sm font-semibold tracking-wide whitespace-nowrap text-black transition-colors hover:bg-zinc-100 active:bg-zinc-200"
-              >
-                JOIN WAITLIST
-              </button>
-            </form>
+            <WaitlistForm className="mt-8" />
           </Reveal>
         </div>
       </div>
