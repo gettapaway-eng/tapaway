@@ -9,11 +9,13 @@ export function Hero() {
         <video
           className="absolute inset-0 h-full w-full object-cover"
           src={`${import.meta.env.BASE_URL}kling_20260804_VIDEO_Animate_th_1940_0.mp4`}
+          poster={`${import.meta.env.BASE_URL}hero-poster.jpg`}
           autoPlay
           loop
           muted
           playsInline
           controls={false}
+          preload="auto"
         />
 
         <motion.header

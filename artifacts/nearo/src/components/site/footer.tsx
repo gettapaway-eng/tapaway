@@ -6,8 +6,10 @@ export function Footer() {
     <footer className="bg-white px-2 py-2 sm:px-4 sm:py-4">
       <div className="relative mx-auto min-h-[420px] max-w-[1920px] overflow-hidden rounded-2xl sm:min-h-[560px]">
         <img
-          src={`${import.meta.env.BASE_URL}footerbg.png`}
+          src={`${import.meta.env.BASE_URL}footerbg.webp`}
           alt=""
+          loading="lazy"
+          decoding="async"
           className="absolute inset-0 h-full w-full object-cover"
         />
 

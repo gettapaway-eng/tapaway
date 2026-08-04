@@ -1,11 +1,12 @@
 import { Reveal, RevealGroup, RevealItem, WordReveal } from "@/components/site/motion";
+import { LazyVideo } from "@/components/site/lazy-video";
 
 const cards = [
   {
     title: "Life on pause.",
     description:
       "Notifications interrupt work, conversations, and quiet moments.",
-    image: "lifedistracted.png",
+    image: "lifedistracted.webp",
   },
   {
     title: "Life reclaimed.",
@@ -37,19 +38,16 @@ export function Features() {
           <RevealItem key={card.title}>
             <div className="aspect-square overflow-hidden rounded-3xl bg-zinc-100">
               {card.video ? (
-                <video
+                <LazyVideo
                   className="h-full w-full object-cover"
                   src={`${import.meta.env.BASE_URL}${encodeURIComponent(card.video)}`}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  controls={false}
                 />
               ) : (
                 <img
                   src={`${import.meta.env.BASE_URL}${encodeURIComponent(card.image!)}`}
                   alt={card.title}
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover"
                 />
               )}

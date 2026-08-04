@@ -5,19 +5,19 @@ const steps = [
     title: "Choose Apps",
     description:
       "Select Instagram, X, Reddit, YouTube or any apps you want blocked.",
-    image: "blockapps.png",
+    image: "blockapps.webp",
   },
   {
     title: "Tap Phone",
     description:
       "Tap your phone on the TapAway device to block the apps and activate focus mode.",
-    image: "tapdevice.png",
+    image: "tapdevice.webp",
   },
   {
     title: "Live Fully",
     description:
       "Feel 95% less distracted — turn your phone back into a tool that supports your goals.",
-    image: "zero distracted.png",
+    image: "zero distracted.webp",
   },
 ];
 
@@ -53,7 +53,7 @@ export function Steps() {
           </h2>
           <Reveal delay={0.1}>
             <p className="mt-4 max-w-sm text-lg text-zinc-500">
-              Three steps between you and a distraction-free phone.
+              A more intentional life starts here.
             </p>
           </Reveal>
         </div>
@@ -71,6 +71,8 @@ export function Steps() {
                 <img
                   src={`${import.meta.env.BASE_URL}${encodeURIComponent(step.image)}`}
                   alt={step.title}
+                  loading="lazy"
+                  decoding="async"
                   className="aspect-square w-full object-cover"
                 />
               </StepCard>
