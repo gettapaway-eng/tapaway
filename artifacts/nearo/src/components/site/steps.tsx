@@ -46,7 +46,7 @@ function StepCard({
 export function Steps() {
   return (
     <section className="mx-auto max-w-7xl px-6 py-24 sm:px-8">
-      <div className="flex flex-col gap-12 md:flex-row md:gap-20">
+      <div className="flex flex-col gap-12 md:flex-row md:items-start md:gap-20">
         <div className="md:sticky md:top-28 md:flex-1">
           <h2 className="text-3xl font-medium tracking-tight text-zinc-900 sm:text-5xl">
             <WordReveal lines={["Get started in", "3 simple steps."]} />
