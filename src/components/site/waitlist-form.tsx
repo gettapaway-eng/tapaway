@@ -19,14 +19,55 @@ function CheckBadge() {
   );
 }
 
+type Status = "idle" | "submitting" | "success" | "error";
+
+const ERROR_MESSAGES: Record<string, string> = {
+  rate_limited: "Too many attempts — please try again in a few minutes.",
+  invalid_input: "That doesn't look like a valid email address.",
+};
+const DEFAULT_ERROR = "Something went wrong. Please try again.";
+
 export function WaitlistForm({ className }: { className?: string }) {
   const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [status, setStatus] = useState<Status>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitted(true);
+    if (status === "submitting") return;
+
+    const form = event.currentTarget;
+    const company = (
+      form.elements.namedItem("company") as HTMLInputElement | null
+    )?.value;
+
+    setStatus("submitting");
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, company }),
+      });
+      const data: { ok: boolean; error?: string } = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setStatus("error");
+        setErrorMessage(
+          (data.error && ERROR_MESSAGES[data.error]) || DEFAULT_ERROR,
+        );
+        return;
+      }
+
+      setStatus("success");
+    } catch {
+      setStatus("error");
+      setErrorMessage(DEFAULT_ERROR);
+    }
   }
+
+  const submitted = status === "success";
 
   return (
     <motion.div
@@ -65,22 +106,40 @@ export function WaitlistForm({ className }: { className?: string }) {
             animate={{ opacity: 1, filter: "blur(0px)" }}
             exit={{ opacity: 0, filter: "blur(4px)" }}
             transition={{ duration: 0.2, ease: easeSmooth }}
-            className="flex items-center p-1.5 pl-6"
+            className="flex flex-col"
           >
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="Your email address"
-              className="h-9 w-full min-w-0 bg-transparent text-base text-white placeholder:text-white/70 focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="shrink-0 rounded-full bg-white px-6 py-2.5 text-sm font-semibold tracking-wide whitespace-nowrap text-black transition-colors hover:bg-zinc-100 active:bg-zinc-200"
-            >
-              JOIN WAITLIST
-            </button>
+            <div className="flex items-center p-1.5 pl-6">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Your email address"
+                className="h-9 w-full min-w-0 bg-transparent text-base text-white placeholder:text-white/70 focus:outline-none"
+              />
+              {/* Honeypot: hidden from real users, invisible to screen readers,
+                  but naive bots that auto-fill every input often fill it in. */}
+              <input
+                type="text"
+                name="company"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="absolute h-0 w-0 opacity-0"
+              />
+              <button
+                type="submit"
+                disabled={status === "submitting"}
+                className="shrink-0 rounded-full bg-white px-6 py-2.5 text-sm font-semibold tracking-wide whitespace-nowrap text-black transition-colors hover:bg-zinc-100 active:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {status === "submitting" ? "JOINING…" : "JOIN WAITLIST"}
+              </button>
+            </div>
+            {errorMessage ? (
+              <p role="alert" className="px-6 pb-3 text-sm text-red-300">
+                {errorMessage}
+              </p>
+            ) : null}
           </motion.form>
         )}
       </AnimatePresence>

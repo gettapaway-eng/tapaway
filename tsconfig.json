@@ -1,6 +1,6 @@
 {
   "compileOnSave": false,
-  "include": ["src/**/*", "vite.config.ts"],
+  "include": ["src/**/*", "api/**/*", "vite.config.ts"],
   "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
     "incremental": true,
