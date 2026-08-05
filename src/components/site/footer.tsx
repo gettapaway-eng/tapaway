@@ -5,7 +5,7 @@ import { WaitlistForm } from "@/components/site/waitlist-form";
 export function Footer() {
   return (
     <footer className="bg-white px-2 py-2 sm:px-4 sm:py-4">
-      <div className="relative mx-auto min-h-[420px] max-w-[1920px] overflow-hidden rounded-2xl sm:min-h-[560px]">
+      <div className="relative mx-auto min-h-[420px] overflow-hidden rounded-2xl sm:min-h-[560px]">
         <img
           src={`${import.meta.env.BASE_URL}footerbg.webp`}
           alt=""

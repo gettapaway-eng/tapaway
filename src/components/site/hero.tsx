@@ -6,7 +6,7 @@ import { WaitlistForm } from "@/components/site/waitlist-form";
 export function Hero() {
   return (
     <section className="bg-white px-2 pt-2 sm:px-4 sm:pt-4">
-      <div className="relative mx-auto min-h-[calc(100svh-6rem)] max-w-[1920px] overflow-hidden rounded-2xl sm:min-h-[calc(100svh-8rem)]">
+      <div className="relative mx-auto min-h-[calc(100svh-6rem)] overflow-hidden rounded-2xl sm:min-h-[calc(100svh-8rem)]">
         <video
           className="absolute inset-0 h-full w-full object-cover"
           src={`${import.meta.env.BASE_URL}kling_20260804_VIDEO_Animate_th_1940_0.mp4`}
