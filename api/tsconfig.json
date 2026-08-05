@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "include": ["**/*.ts"],
+  "compilerOptions": {
+    "noEmit": false,
+    "lib": ["es2022"],
+    "types": ["node"],
+    "allowImportingTsExtensions": false
+  }
+}
