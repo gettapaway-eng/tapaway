@@ -2,6 +2,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 import { z } from 'zod';
+// `with { type: 'json' }` is required: Node's ESM loader refuses JSON imports
+// without it, and this package's `main` points straight at index.json.
+import disposableDomains from 'disposable-email-domains/index.json' with { type: 'json' };
+import wildcardDisposableDomains from 'disposable-email-domains/wildcard.json' with { type: 'json' };
 
 // ---------------------------------------------------------------------------
 // Rate limiting
@@ -27,11 +31,53 @@ const ratelimit = new Ratelimit({
   prefix: 'waitlist',
 });
 
+// ---------------------------------------------------------------------------
+// Disposable address blocking
+//
+// A static list is the whole defense here: new burner domains appear daily so
+// this can never be complete, but it costs nothing at runtime (~18ms to build
+// the Set once per cold start, then O(1) lookups) and kills the long tail of
+// casual mailinator signups. Refresh it with `pnpm up disposable-email-domains`.
+// ---------------------------------------------------------------------------
+const DISPOSABLE = new Set<string>([
+  ...disposableDomains,
+  ...wildcardDisposableDomains,
+]);
+
+// Escape hatches for a list this large (~121k domains). Anything added to
+// ALLOWED wins over the blocklist — use it when a real signup gets caught.
+const ALLOWED = new Set<string>([]);
+// Burners the upstream list lags on. Add anything you spot in signups.
+const EXTRA_DISPOSABLE = new Set<string>([]);
+
+function isDisposable(email: string): boolean {
+  const host = email.slice(email.lastIndexOf('@') + 1);
+  if (ALLOWED.has(host)) return false;
+  // Walk parent domains so mail.burner.example is caught by burner.example.
+  // Stops before the bare TLD, and the list contains no public suffixes
+  // (no `com`, `co.uk`, …), so this can't blanket-block a legitimate one.
+  const labels = host.split('.');
+  for (let i = 0; i < labels.length - 1; i++) {
+    const domain = labels.slice(i).join('.');
+    if (ALLOWED.has(domain)) return false;
+    if (DISPOSABLE.has(domain) || EXTRA_DISPOSABLE.has(domain)) return true;
+  }
+  return false;
+}
+
+// Honeypot: a field real users never see or fill, but naive bots that
+// auto-fill every input often do. Any value at all here means a bot.
+function isHoneypotTripped(company: unknown): boolean {
+  if (typeof company === 'string') return company.trim().length > 0;
+  return company !== undefined && company !== null;
+}
+
 const bodySchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
-  // Honeypot: a field real users never see or fill, but naive bots that
-  // auto-fill every input often do. Any non-empty value here is a bot.
-  company: z.string().max(0).optional(),
+  // Deliberately unconstrained rather than `.max(0)`: a filled honeypot has to
+  // survive validation to reach the silent-success branch in the handler. If it
+  // failed parsing instead, the bot would get a 400 to learn from.
+  company: z.unknown().optional(),
 });
 
 // www.tapaway.today is the actual Production origin — the bare apex domain
@@ -125,8 +171,16 @@ export default async function handler(
 
   // Honeypot tripped: pretend success without actually doing anything, so
   // the bot has no error response to learn from and adapt to.
-  if (company) {
+  if (isHoneypotTripped(company)) {
     res.status(200).json({ ok: true });
+    return;
+  }
+
+  // Told plainly rather than silently swallowed like the honeypot above: a real
+  // person on a burner address can just switch to a permanent one, and they
+  // can't do that without knowing why they were rejected.
+  if (isDisposable(email)) {
+    res.status(400).json({ ok: false, error: 'disposable_email' });
     return;
   }
 
