@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
 import { makeRateLimit } from '../_lib/guards.js';
-import { supabaseAdmin } from '../_lib/supabase.js';
+import { supabaseAdmin, userFromToken } from '../_lib/supabase.js';
 
 // Waitlist moderation for the admin portal. Lives server-side because it has
 // to touch two systems that must agree: the AutoSend mailing list (secret API
@@ -78,9 +78,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(401).json({ ok: false, error: 'not_signed_in' });
     return;
   }
-  const { data: userData, error: userError } = await db.auth.getUser(token);
-  const user = userData?.user;
-  if (userError || !user) {
+  const user = await userFromToken(token);
+  if (!user) {
     res.status(401).json({ ok: false, error: 'not_signed_in' });
     return;
   }
