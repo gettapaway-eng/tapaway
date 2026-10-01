@@ -148,3 +148,148 @@
     cursor: pointer;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Shop + admin motion tokens. One place for easing so every press, select and
+   reveal shares the same feel.
+   --------------------------------------------------------------------------- */
+:root {
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --focus-blue: #2f7bf6;
+  --graphite: #4b4f55;
+}
+
+@layer utilities {
+  /* Press feedback for anything tappable: the UI visibly hears the press. */
+  .press {
+    transition: transform 160ms var(--ease-out-strong), background-color 150ms ease, border-color 150ms ease,
+      color 150ms ease, box-shadow 150ms ease;
+  }
+  .press:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--focus-blue);
+    outline-offset: 2px;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Admin: a native macOS-feeling surface. System font, 13px base, semantic
+   tokens re-pointed so light and dark follow the OS. Scoped to .admin-root so
+   the marketing site and shop keep their own look.
+   --------------------------------------------------------------------------- */
+.admin-root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.2 0.005 270);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.005 270);
+  --popover: oklch(1 0 0 / 0.86);
+  --popover-foreground: oklch(0.2 0.005 270);
+  --primary: oklch(0.23 0.005 270);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.965 0.002 270);
+  --secondary-foreground: oklch(0.23 0.005 270);
+  --muted: oklch(0.965 0.002 270);
+  --muted-foreground: oklch(0.52 0.008 270);
+  --accent: oklch(0.95 0.003 270);
+  --accent-foreground: oklch(0.2 0.005 270);
+  --border: oklch(0.91 0.003 270);
+  --input: oklch(0.89 0.004 270);
+  --ring: var(--focus-blue);
+  --sidebar: oklch(0.955 0.003 270);
+  --sidebar-foreground: oklch(0.3 0.006 270);
+  --sidebar-accent: oklch(0.905 0.004 270);
+  --sidebar-accent-foreground: oklch(0.18 0.005 270);
+  --sidebar-border: oklch(0.9 0.004 270);
+  --sidebar-ring: var(--focus-blue);
+  --tint: var(--focus-blue);
+
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: -0.003em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--sidebar);
+  color: var(--foreground);
+}
+
+.admin-root.dark {
+  --background: oklch(0.215 0.004 270);
+  --foreground: oklch(0.96 0.002 270);
+  --card: oklch(0.245 0.004 270);
+  --card-foreground: oklch(0.96 0.002 270);
+  --popover: oklch(0.26 0.005 270 / 0.86);
+  --popover-foreground: oklch(0.96 0.002 270);
+  --primary: oklch(0.96 0.002 270);
+  --primary-foreground: oklch(0.2 0.004 270);
+  --secondary: oklch(0.28 0.005 270);
+  --secondary-foreground: oklch(0.96 0.002 270);
+  --muted: oklch(0.28 0.005 270);
+  --muted-foreground: oklch(0.68 0.008 270);
+  --accent: oklch(0.3 0.005 270);
+  --accent-foreground: oklch(0.96 0.002 270);
+  --border: oklch(1 0 0 / 0.09);
+  --input: oklch(1 0 0 / 0.13);
+  --sidebar: oklch(0.175 0.004 270);
+  --sidebar-foreground: oklch(0.82 0.005 270);
+  --sidebar-accent: oklch(1 0 0 / 0.08);
+  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --sidebar-border: oklch(1 0 0 / 0.07);
+  --tint: #4c95ff;
+}
+
+/* Display sizes tighten, small sizes open up — tracking is size-specific. */
+.admin-root .type-title {
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.022em;
+  font-weight: 650;
+}
+.admin-root .type-large {
+  font-size: 28px;
+  line-height: 1.05;
+  letter-spacing: -0.026em;
+  font-weight: 650;
+}
+.admin-root .type-caption {
+  font-size: 11.5px;
+  letter-spacing: 0.006em;
+}
+
+/* Translucent toolbar: content scrolls under a material, edge fades instead
+   of a hard divider. */
+.admin-root .toolbar-material {
+  background: color-mix(in oklch, var(--background) 72%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .admin-root .toolbar-material {
+    background: var(--background);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Appearance change: a short cross-fade so light↔dark never flashes. Only
+   present for ~300ms after a switch, so everyday hovers stay instant. */
+body.admin-root.theme-switching,
+body.admin-root.theme-switching *,
+body.admin-root.theme-switching *::before,
+body.admin-root.theme-switching *::after {
+  transition: background-color 260ms ease, border-color 260ms ease, color 260ms ease, fill 260ms ease,
+    stroke 260ms ease !important;
+}

@@ -1,76 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
 import { z } from 'zod';
-// `with { type: 'json' }` is required: Node's ESM loader refuses JSON imports
-// without it, and this package's `main` points straight at index.json.
-import disposableDomains from 'disposable-email-domains/index.json' with { type: 'json' };
-import wildcardDisposableDomains from 'disposable-email-domains/wildcard.json' with { type: 'json' };
+import {
+  acceptPostOnly,
+  getClientIp,
+  isDisposable,
+  isHoneypotTripped,
+  makeRateLimit,
+} from './_lib/guards.js';
+import { supabaseAdmin } from './_lib/supabase.js';
 
-// ---------------------------------------------------------------------------
-// Rate limiting
-//
-// Serverless functions are stateless between invocations, so an in-memory
-// counter would not survive across requests (or across regions). Upstash's
-// Redis is REST-based specifically so it works from short-lived functions
-// like this one. Configure via Vercel's dashboard → Storage → Upstash
-// integration, which populates KV_REST_API_URL / KV_REST_API_TOKEN for you.
-// (Not UPSTASH_REDIS_REST_URL/TOKEN — those are the names used only when
-// connecting an Upstash account directly, outside Vercel's own integration.)
-// ---------------------------------------------------------------------------
-const kvUrl = process.env.KV_REST_API_URL;
-const kvToken = process.env.KV_REST_API_TOKEN;
-if (!kvUrl || !kvToken) {
-  throw new Error('KV_REST_API_URL or KV_REST_API_TOKEN is not configured');
-}
-const redis = new Redis({ url: kvUrl, token: kvToken });
-const ratelimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(5, '10 m'), // 5 submissions / 10 min / IP
-  analytics: true,
-  prefix: 'waitlist',
-});
-
-// ---------------------------------------------------------------------------
-// Disposable address blocking
-//
-// A static list is the whole defense here: new burner domains appear daily so
-// this can never be complete, but it costs nothing at runtime (~18ms to build
-// the Set once per cold start, then O(1) lookups) and kills the long tail of
-// casual mailinator signups. Refresh it with `pnpm up disposable-email-domains`.
-// ---------------------------------------------------------------------------
-const DISPOSABLE = new Set<string>([
-  ...disposableDomains,
-  ...wildcardDisposableDomains,
-]);
-
-// Escape hatches for a list this large (~121k domains). Anything added to
-// ALLOWED wins over the blocklist — use it when a real signup gets caught.
-const ALLOWED = new Set<string>([]);
-// Burners the upstream list lags on. Add anything you spot in signups.
-const EXTRA_DISPOSABLE = new Set<string>([]);
-
-function isDisposable(email: string): boolean {
-  const host = email.slice(email.lastIndexOf('@') + 1);
-  if (ALLOWED.has(host)) return false;
-  // Walk parent domains so mail.burner.example is caught by burner.example.
-  // Stops before the bare TLD, and the list contains no public suffixes
-  // (no `com`, `co.uk`, …), so this can't blanket-block a legitimate one.
-  const labels = host.split('.');
-  for (let i = 0; i < labels.length - 1; i++) {
-    const domain = labels.slice(i).join('.');
-    if (ALLOWED.has(domain)) return false;
-    if (DISPOSABLE.has(domain) || EXTRA_DISPOSABLE.has(domain)) return true;
-  }
-  return false;
-}
-
-// Honeypot: a field real users never see or fill, but naive bots that
-// auto-fill every input often do. Any value at all here means a bot.
-function isHoneypotTripped(company: unknown): boolean {
-  if (typeof company === 'string') return company.trim().length > 0;
-  return company !== undefined && company !== null;
-}
+const ratelimit = makeRateLimit('waitlist', 5, '10 m'); // 5 submissions / 10 min / IP
 
 const bodySchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
@@ -79,18 +18,6 @@ const bodySchema = z.object({
   // failed parsing instead, the bot would get a 400 to learn from.
   company: z.unknown().optional(),
 });
-
-// www.tapaway.today is the actual Production origin — the bare apex domain
-// redirects (308) to it, so that's what the browser's Origin header sends.
-const ALLOWED_ORIGIN =
-  process.env.ALLOWED_ORIGIN ?? 'https://www.tapaway.today';
-
-function getClientIp(req: VercelRequest): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  const first = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-  const ip = first?.split(',')[0]?.trim();
-  return ip || req.socket?.remoteAddress || 'unknown';
-}
 
 async function upsertAutosendContact(email: string): Promise<boolean> {
   const apiKey = process.env.AUTOSEND_API_KEY;
@@ -128,29 +55,32 @@ async function upsertAutosendContact(email: string): Promise<boolean> {
   }
 }
 
+/**
+ * Copies the signup into Supabase so the admin portal can list it. AutoSend
+ * stays the mailing list and the source of truth for sending; a failure here
+ * is logged, never surfaced — the person did join the list.
+ */
+async function mirrorToSupabase(email: string): Promise<void> {
+  const db = supabaseAdmin();
+  if (!db) {
+    console.warn('Supabase not configured; waitlist signup not mirrored');
+    return;
+  }
+  try {
+    const { error } = await db
+      .from('waitlist_signups')
+      .upsert({ email, source: 'website' }, { onConflict: 'email', ignoreDuplicates: true });
+    if (error) console.error('Waitlist mirror failed', error.message);
+  } catch (err) {
+    console.error('Waitlist mirror request error', err);
+  }
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
 ) {
-  // CORS: browser JS on other origins can't read the response. This is not
-  // an access-control mechanism by itself (a script can still call this
-  // endpoint directly, bypassing CORS entirely) — it just stops other sites
-  // from quietly embedding this form flow against visitors of their own
-  // pages. Rate limiting below is the actual defense.
-  res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Vary', 'Origin');
-
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
-
-  if (req.method !== 'POST') {
-    res.status(405).json({ ok: false, error: 'method_not_allowed' });
-    return;
-  }
+  if (!acceptPostOnly(req, res)) return;
 
   const ip = getClientIp(req);
 
@@ -195,6 +125,8 @@ export default async function handler(
     res.status(502).json({ ok: false, error: 'upstream_error' });
     return;
   }
+
+  await mirrorToSupabase(email);
 
   // Always the same generic success shape, whether this email was new or
   // already on the list — the response never reveals which, so the endpoint

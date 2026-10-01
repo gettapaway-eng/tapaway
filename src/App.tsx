@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactLenis } from 'lenis/react';
 import { Toaster } from '@/components/ui/toaster';
@@ -9,7 +10,24 @@ import { Features } from '@/components/site/features';
 import { Steps } from '@/components/site/steps';
 import { Footer } from '@/components/site/footer';
 
+// Lazy so the Supabase client (and its env check) only loads on the admin
+// subdomain — the marketing site never pays for it, and can't be broken by it.
+const Admin = lazy(() => import('@/pages/admin'));
+
 const queryClient = new QueryClient();
+
+// The admin exists only on its own subdomain (admin.tapaway.today) but ships in
+// this same build: the hostname decides which app renders. There is no /admin
+// route on the main site. Local dev: http://admin.localhost:5173.
+const isAdminHost = window.location.hostname.startsWith('admin.');
+
+function AdminApp() {
+  return (
+    <Suspense fallback={null}>
+      <Admin />
+    </Suspense>
+  );
+}
 
 function Home() {
   return (
@@ -23,6 +41,7 @@ function Home() {
 }
 
 function Router() {
+  if (isAdminHost) return <AdminApp />;
   return (
     <Switch>
       <Route path="/" component={Home} />
