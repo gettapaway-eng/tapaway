@@ -19,7 +19,8 @@ export function OverviewPage() {
   const orders = useOrders();
   const { go, select } = useAdminNav();
 
-  const signups = waitlist.data ?? [];
+  // Deleted signups don't count anywhere on the overview.
+  const signups = useMemo(() => (waitlist.data ?? []).filter((row) => !row.removed_at), [waitlist.data]);
   const tags = inventory.data ?? [];
   const preorders = orders.data ?? [];
 

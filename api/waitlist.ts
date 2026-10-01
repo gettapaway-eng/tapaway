@@ -76,6 +76,28 @@ async function mirrorToSupabase(email: string): Promise<void> {
   }
 }
 
+/**
+ * An address an admin removed stays removed: re-submitting it reports success
+ * (same shape as every success, so it can't be probed) but neither re-adds it
+ * to AutoSend nor un-removes it here. Fails open — if Supabase can't be
+ * reached, the signup goes through as normal rather than being lost.
+ */
+async function isRemoved(email: string): Promise<boolean> {
+  const db = supabaseAdmin();
+  if (!db) return false;
+  try {
+    const { data } = await db
+      .from('waitlist_signups')
+      .select('removed_at')
+      .eq('email', email)
+      .not('removed_at', 'is', null)
+      .maybeSingle();
+    return Boolean(data);
+  } catch {
+    return false;
+  }
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
@@ -111,6 +133,11 @@ export default async function handler(
   // can't do that without knowing why they were rejected.
   if (isDisposable(email)) {
     res.status(400).json({ ok: false, error: 'disposable_email' });
+    return;
+  }
+
+  if (await isRemoved(email)) {
+    res.status(200).json({ ok: true });
     return;
   }
 

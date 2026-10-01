@@ -4,6 +4,7 @@ import { Check, Copy, Mail } from 'lucide-react';
 import HoldButton from '@/components/registry/hold-button';
 import { DiscreteTabs } from '@/components/registry/discrete-tabs';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import { useAdminNav } from './context';
 import {
   tagStatus,
@@ -12,7 +13,6 @@ import {
   useReleaseTag,
   useSetProvisioner,
   useUsers,
-  useWaitlist,
   type InventoryRow,
   type OrderRow,
   type TagStatus,
@@ -76,7 +76,8 @@ export const TAG_STATUS: Record<TagStatus, { label: string; tone: PillTone }> = 
 
 export function TagsPage() {
   const inventory = useInventory();
-  const { selection, select } = useAdminNav();
+  const { selection, select, role, email } = useAdminNav();
+  const isAdmin = role === 'admin';
   const [filter, setFilter] = useState<'all' | TagStatus>('all');
   const [query, setQuery] = useState('');
 
@@ -97,12 +98,18 @@ export function TagsPage() {
     <>
       <PageHeader
         title="Tags"
-        description="Every tag provisioned from the iOS debug menu. Select one to see who owns it or release it."
+        description={
+          isAdmin
+            ? 'Every tag provisioned from the iOS debug menu. Select one to see who owns it or release it.'
+            : 'Every tag provisioned so far, and whether it has been confirmed and registered.'
+        }
       >
         <ToolButton icon="refresh" spinning={inventory.isFetching} onClick={() => inventory.refetch()}>
           Refresh
         </ToolButton>
       </PageHeader>
+
+      <MyProvisioning rows={rows} email={email} prominent={!isAdmin} />
 
       <Toolbar>
         <DiscreteTabs<'all' | TagStatus>
@@ -116,10 +123,10 @@ export function TagsPage() {
             { value: 'unconfirmed', label: 'Unconfirmed', count: counts.unconfirmed },
           ]}
         />
-        <SearchField value={query} onChange={setQuery} placeholder="Search ID, owner, tag name" />
+        <SearchField value={query} onChange={setQuery} placeholder={isAdmin ? 'Search ID, owner, tag name' : 'Search hardware ID'} />
       </Toolbar>
 
-      <DataTable head={['Hardware ID', 'Status', 'Owner', 'Provisioned']}>
+      <DataTable head={['Hardware ID', 'Status', isAdmin ? 'Owner' : 'Registered', 'Provisioned']}>
         {inventory.isLoading ? (
           <SkeletonRows columns={4} />
         ) : inventory.error ? (
@@ -149,8 +156,18 @@ export function TagsPage() {
                   <Pill tone={status.tone}>{status.label}</Pill>
                 </Cell>
                 <Cell>
-                  {row.owner_email ?? <span className="text-muted-foreground">—</span>}
-                  {row.tag_name ? <span className="ml-2 text-muted-foreground">{row.tag_name}</span> : null}
+                  {isAdmin ? (
+                    <>
+                      {row.owner_email ?? <span className="text-muted-foreground">—</span>}
+                      {row.tag_name ? <span className="ml-2 text-muted-foreground">{row.tag_name}</span> : null}
+                    </>
+                  ) : row.owner_user_id ? (
+                    <span className="text-muted-foreground">
+                      Yes{row.registered_at ? <> · <RelativeTime value={row.registered_at} /></> : null}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </Cell>
                 <Cell className="text-muted-foreground">
                   <RelativeTime value={row.provisioned_at} />
@@ -161,16 +178,61 @@ export function TagsPage() {
         )}
       </DataTable>
 
-      <TagInspector row={selected} onClose={() => select(null)} />
+      <TagInspector row={selected} canManage={isAdmin} onClose={() => select(null)} />
     </>
+  );
+}
+
+/**
+ * "How am I doing?" for whoever is signed in: tags they provisioned today and
+ * in total, and any of theirs stuck unconfirmed (present those to the
+ * provisioner again). Prominent for provisioners — it's their main question —
+ * and only shown to admins once they've provisioned something themselves.
+ */
+function MyProvisioning({ rows, email, prominent }: { rows: InventoryRow[]; email: string; prominent: boolean }) {
+  const mine = rows.filter((row) => row.provisioned_by_email === email);
+  if (!prominent && mine.length === 0) return null;
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const today = mine.filter((row) => new Date(row.provisioned_at) >= startOfDay && row.confirmed_at).length;
+  const confirmed = mine.filter((row) => row.confirmed_at).length;
+  const stuck = mine.filter((row) => !row.confirmed_at).length;
+
+  const cells = [
+    { label: 'Provisioned today', value: today, caption: 'Confirmed tags' },
+    { label: 'Provisioned in total', value: confirmed, caption: `By ${email}` },
+    {
+      label: 'Need another pass',
+      value: stuck,
+      caption: stuck ? 'Present these to the provisioner again' : 'Nothing stuck',
+      warn: stuck > 0,
+    },
+  ];
+
+  return (
+    <section
+      aria-label="Your provisioning"
+      className="mt-5 grid grid-cols-3 overflow-hidden rounded-xl border border-border bg-card"
+    >
+      {cells.map((cell) => (
+        <div key={cell.label} className="border-border px-5 py-3.5 [&:not(:last-child)]:border-r">
+          <p className="text-muted-foreground">{cell.label}</p>
+          <p className={cn('type-large tabular mt-1.5', cell.warn && 'text-amber-600 dark:text-amber-400')}>{cell.value}</p>
+          <p className="type-caption mt-0.5 truncate text-muted-foreground">{cell.caption}</p>
+        </div>
+      ))}
+    </section>
   );
 }
 
 function TagInspector({
   row,
+  canManage,
   onClose,
 }: {
   row: InventoryRow | undefined;
+  /** Admins see the owner and can release; provisioners get a read-only view. */
+  canManage: boolean;
   onClose: () => void;
 }) {
   const release = useReleaseTag();
@@ -184,7 +246,7 @@ function TagInspector({
       title={<span className="tabular font-mono text-[14px]">{hex}</span>}
       subtitle={status ? <Pill tone={status.tone}>{status.label}</Pill> : null}
       footer={
-        row?.owner_user_id ? (
+        canManage && row?.owner_user_id ? (
           <div>
             <HoldButton
               size="md"
@@ -221,9 +283,13 @@ function TagInspector({
     >
       {row ? (
         <>
-          <DetailGroup title="Ownership">
-            <DetailRow label="Owner">{row.owner_email ?? <span className="text-muted-foreground">Nobody</span>}</DetailRow>
-            {row.tag_name ? <DetailRow label="Named">{row.tag_name}</DetailRow> : null}
+          <DetailGroup title={canManage ? 'Ownership' : 'Registration'}>
+            {canManage ? (
+              <DetailRow label="Owner">{row.owner_email ?? <span className="text-muted-foreground">Nobody</span>}</DetailRow>
+            ) : (
+              <DetailRow label="Registered">{row.owner_user_id ? 'Yes' : 'Not yet'}</DetailRow>
+            )}
+            {canManage && row.tag_name ? <DetailRow label="Named">{row.tag_name}</DetailRow> : null}
             {row.registered_at ? (
               <DetailRow label="Last updated">
                 <RelativeTime value={row.registered_at} />
@@ -426,85 +492,6 @@ function UserInspector({
         </>
       ) : null}
     </Inspector>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Waitlist
-// ---------------------------------------------------------------------------
-
-const SOURCE_LABEL: Record<string, string> = { website: 'Website', autosend: 'Imported from AutoSend' };
-
-export function WaitlistPage() {
-  const waitlist = useWaitlist();
-  const [source, setSource] = useState<'all' | 'website' | 'autosend'>('all');
-  const [query, setQuery] = useState('');
-  const rows = waitlist.data ?? [];
-  const bySource = (value: string) => rows.filter((row) => row.source === value).length;
-  const visible = rows.filter((row) => (source === 'all' || row.source === source) && includes([row.email], query));
-
-  return (
-    <>
-      <PageHeader
-        title="Waitlist"
-        description="Everyone who joined from the website. Click a row to copy the address."
-      >
-        <ToolButton
-          icon="download"
-          disabled={visible.length === 0}
-          onClick={() => {
-            csvDownload('tapaway-waitlist.csv', [
-              ['email', 'source', 'joined'],
-              ...visible.map((row) => [row.email, row.source, row.created_at]),
-            ]);
-            toast.success(`Exported ${visible.length} signup${visible.length === 1 ? '' : 's'}`);
-          }}
-        >
-          Export
-        </ToolButton>
-        <ToolButton icon="refresh" spinning={waitlist.isFetching} onClick={() => waitlist.refetch()}>
-          Refresh
-        </ToolButton>
-      </PageHeader>
-
-      <Toolbar>
-        <DiscreteTabs<'all' | 'website' | 'autosend'>
-          label="Filter by source"
-          value={source}
-          onChange={setSource}
-          options={[
-            { value: 'all', label: 'All', count: rows.length },
-            { value: 'website', label: 'Website', count: bySource('website') },
-            { value: 'autosend', label: 'Imported', count: bySource('autosend') },
-          ]}
-        />
-        <SearchField value={query} onChange={setQuery} placeholder="Search by email" />
-      </Toolbar>
-
-      <DataTable head={['Email', 'Source', 'Joined']}>
-        {waitlist.isLoading ? (
-          <SkeletonRows columns={3} rows={10} />
-        ) : waitlist.error ? (
-          <TableMessage columns={3} tone="error" title="Couldn't load the waitlist" detail={waitlist.error.message} />
-        ) : visible.length === 0 ? (
-          <TableMessage
-            columns={3}
-            title={rows.length === 0 ? 'No signups yet' : 'No signups match'}
-            detail={rows.length === 0 ? 'Signups from the homepage form appear here.' : undefined}
-          />
-        ) : (
-          visible.map((row) => (
-            <Row key={row.email} label={`Copy ${row.email}`} onOpen={() => copy(row.email, 'Email')}>
-              <Cell>{row.email}</Cell>
-              <Cell className="text-muted-foreground">{SOURCE_LABEL[row.source] ?? row.source}</Cell>
-              <Cell className="text-muted-foreground">
-                <RelativeTime value={row.created_at} />
-              </Cell>
-            </Row>
-          ))
-        )}
-      </DataTable>
-    </>
   );
 }
 

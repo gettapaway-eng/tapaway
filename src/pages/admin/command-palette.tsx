@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { ClipboardList, LayoutGrid, Mail, Nfc, Users } from 'lucide-react';
+import { ClipboardList, History, LayoutGrid, Mail, Nfc, Users } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Kbd } from '@/components/ui/kbd';
-import { useAdminNav, type Section } from './context';
+import { ROLE_SECTIONS, useAdminNav, type Section } from './context';
 import { useInventory, useOrders, useUsers } from './data';
 import { hardwareIdHex } from './format';
 
@@ -16,6 +16,7 @@ export const SECTION_META: Record<Section, { label: string; icon: typeof Nfc }> 
   users: { label: 'Users', icon: Users },
   waitlist: { label: 'Waitlist', icon: Mail },
   orders: { label: 'Pre-orders', icon: ClipboardList },
+  activity: { label: 'Activity log', icon: History },
 };
 
 export function useCommandPalette() {
@@ -34,10 +35,11 @@ export function useCommandPalette() {
 }
 
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { go, select } = useAdminNav();
-  const users = useUsers();
+  const { go, select, role } = useAdminNav();
+  const isAdmin = role === 'admin';
+  const users = useUsers(isAdmin);
   const inventory = useInventory();
-  const orders = useOrders();
+  const orders = useOrders(isAdmin);
 
   const run = (action: () => void) => {
     onOpenChange(false);
@@ -57,12 +59,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
             loop
             className="rounded-none bg-[color-mix(in_oklch,var(--background)_82%,transparent)] backdrop-blur-2xl backdrop-saturate-150 [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-[11.5px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-input-wrapper]]:h-12 [&_[cmdk-input-wrapper]]:border-border [&_[cmdk-input-wrapper]]:px-4 [&_[cmdk-input]]:text-[15px]"
           >
-            <CommandInput placeholder="Search people, tags, pre-orders…" autoFocus />
+            <CommandInput placeholder={isAdmin ? 'Search people, tags, pre-orders…' : 'Search tags…'} autoFocus />
             <CommandList className="max-h-[min(420px,55vh)] p-1.5">
               <CommandEmpty className="py-10 text-center text-muted-foreground">No results.</CommandEmpty>
 
               <CommandGroup heading="Go to">
-                {(Object.keys(SECTION_META) as Section[]).map((section) => {
+                {ROLE_SECTIONS[role].map((section: Section) => {
                   const { label, icon: Icon } = SECTION_META[section];
                   return (
                     <PaletteItem key={section} value={`go ${label}`} onSelect={() => run(() => go(section))}>
@@ -73,7 +75,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 })}
               </CommandGroup>
 
-              {users.data?.length ? (
+              {isAdmin && users.data?.length ? (
                 <CommandGroup heading="Users">
                   {users.data.map((row) => (
                     <PaletteItem
@@ -107,7 +109,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 </CommandGroup>
               ) : null}
 
-              {orders.data?.length ? (
+              {isAdmin && orders.data?.length ? (
                 <CommandGroup heading="Pre-orders">
                   {orders.data.map((row) => (
                     <PaletteItem

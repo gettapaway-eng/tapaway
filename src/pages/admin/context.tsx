@@ -4,12 +4,20 @@ import { createContext, useContext } from 'react';
 // page) can say "show me this tag" and the right section opens with the
 // right inspector.
 
-export type Section = 'overview' | 'tags' | 'users' | 'waitlist' | 'orders';
-export const SECTIONS: Section[] = ['overview', 'tags', 'users', 'waitlist', 'orders'];
+export type Section = 'overview' | 'tags' | 'users' | 'waitlist' | 'orders' | 'activity';
+export const SECTIONS: Section[] = ['overview', 'tags', 'users', 'waitlist', 'orders', 'activity'];
 
 export type Selection = { kind: 'tag' | 'user' | 'order'; id: string } | null;
 
+/** Sections each role can open. Provisioners get the tag inventory, read-only. */
+export const ROLE_SECTIONS: Record<'admin' | 'provisioner', Section[]> = {
+  admin: SECTIONS,
+  provisioner: ['tags'],
+};
+
 export interface AdminNav {
+  role: 'admin' | 'provisioner';
+  email: string;
   section: Section;
   go: (section: Section) => void;
   selection: Selection;

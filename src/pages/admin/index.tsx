@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
 import { MotionConfig } from 'motion/react';
 import { LogOut, Search } from 'lucide-react';
@@ -23,10 +22,12 @@ import {
 } from '@/components/ui/sidebar';
 import { supabase } from '@/lib/supabase';
 import { CommandPalette, SECTION_META, useCommandPalette } from './command-palette';
-import { AdminNavContext, SECTIONS, type AdminNav, type Section, type Selection } from './context';
-import { useInventory, useOrders, useUsers, useWaitlist } from './data';
+import { AdminNavContext, ROLE_SECTIONS, type AdminNav, type Section, type Selection } from './context';
+import { useAdminRole, useInventory, useOrders, useUsers, useWaitlist, type AdminRole } from './data';
 import { OverviewPage } from './overview';
-import { OrdersPage, TagsPage, UsersPage, WaitlistPage } from './pages';
+import { ActivityPage } from './activity';
+import { OrdersPage, TagsPage, UsersPage } from './pages';
+import { WaitlistPage } from './waitlist';
 import { AdminSignIn } from './sign-in';
 import { AdminThemeProvider, ThemeSwitch, useAdminTheme } from './theme';
 
@@ -67,22 +68,16 @@ function AdminRoot() {
 }
 
 function AdminGate({ session }: { session: Session }) {
-  const isAdmin = useQuery({
-    queryKey: ['admin', 'is-admin', session.user.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('is_admin');
-      if (error) throw new Error(error.message);
-      return data === true;
-    },
-  });
+  const role = useAdminRole(session.user.id);
 
-  if (isAdmin.isLoading) return <FullPage />;
-  if (!isAdmin.data) {
+  if (role.isLoading) return <FullPage />;
+  if (!role.data) {
     return (
       <FullPage>
-        <p className="text-[15px] font-semibold">{session.user.email} doesn't have admin access</p>
+        <p className="text-[15px] font-semibold">{session.user.email} doesn't have access</p>
         <p className="max-w-xs text-center text-muted-foreground">
-          Ask an existing admin to add this account, or sign in with a different one.
+          Admins and tag provisioners can sign in here. Ask an admin to give this account access, or sign in with a
+          different one.
         </p>
         <button
           type="button"
@@ -94,30 +89,41 @@ function AdminGate({ session }: { session: Session }) {
       </FullPage>
     );
   }
-  return <AdminShell email={session.user.email ?? ''} />;
+  return <AdminShell email={session.user.email ?? ''} role={role.data} />;
 }
 
-function readSection(): Section {
+/** The hash names the section; anything this role can't open falls back to its first section. */
+function readSection(allowed: Section[]): Section {
   const hash = window.location.hash.slice(1);
-  return (SECTIONS as string[]).includes(hash) ? (hash as Section) : 'overview';
+  if ((allowed as string[]).includes(hash)) return hash as Section;
+  // Keep the URL honest: a link to a section this role can't open is
+  // rewritten (without a history entry) to where they actually landed.
+  window.history.replaceState(null, '', `#${allowed[0]}`);
+  return allowed[0];
 }
 
-function AdminShell({ email }: { email: string }) {
+function AdminShell({ email, role }: { email: string; role: AdminRole }) {
+  const allowed = ROLE_SECTIONS[role];
+  const isAdmin = role === 'admin';
   // The section lives in the URL hash, so refresh and back/forward work.
-  const [section, setSection] = useState<Section>(readSection);
+  const [section, setSection] = useState<Section>(() => readSection(allowed));
   const [selection, setSelection] = useState<Selection>(null);
   const palette = useCommandPalette();
 
   useEffect(() => {
-    const onHash = () => setSection(readSection());
+    const onHash = () => setSection(readSection(allowed));
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
-  }, []);
+  }, [allowed]);
 
-  const go = useCallback((next: Section) => {
-    if (window.location.hash !== `#${next}`) window.location.hash = next;
-    setSection(next);
-  }, []);
+  const go = useCallback(
+    (next: Section) => {
+      if (!allowed.includes(next)) return;
+      if (window.location.hash !== `#${next}`) window.location.hash = next;
+      setSection(next);
+    },
+    [allowed],
+  );
 
   // Selecting something also brings up the section that owns it.
   const select = useCallback(
@@ -128,14 +134,18 @@ function AdminShell({ email }: { email: string }) {
     [go],
   );
 
-  const nav = useMemo<AdminNav>(() => ({ section, go, selection, select }), [section, go, selection, select]);
+  const nav = useMemo<AdminNav>(
+    () => ({ role, email, section, go, selection, select }),
+    [role, email, section, go, selection, select],
+  );
 
   // Loaded up front so the sidebar shows counts; each page reuses the cache.
+  // Admin-only data isn't requested at all for a provisioner.
   const counts: Partial<Record<Section, number | undefined>> = {
     tags: useInventory().data?.length,
-    users: useUsers().data?.length,
-    waitlist: useWaitlist().data?.length,
-    orders: useOrders().data?.length,
+    users: useUsers(isAdmin).data?.length,
+    waitlist: useWaitlist(isAdmin).data?.filter((row) => !row.removed_at).length,
+    orders: useOrders(isAdmin).data?.length,
   };
 
   return (
@@ -164,7 +174,7 @@ function AdminShell({ email }: { email: string }) {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {SECTIONS.map((id) => {
+                  {allowed.map((id) => {
                     const { label, icon: Icon } = SECTION_META[id];
                     const active = id === section;
                     return (
@@ -204,7 +214,9 @@ function AdminShell({ email }: { email: string }) {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12.5px] font-medium">{email}</span>
-                    <span className="block text-[11px] text-muted-foreground">Sign out</span>
+                    <span className="block text-[11px] text-muted-foreground">
+                      {isAdmin ? 'Sign out' : 'Provisioner · Sign out'}
+                    </span>
                   </span>
                   <LogOut className="size-3.5 text-muted-foreground" />
                 </SidebarMenuButton>
@@ -234,6 +246,7 @@ function AdminShell({ email }: { email: string }) {
             {section === 'users' ? <UsersPage /> : null}
             {section === 'waitlist' ? <WaitlistPage /> : null}
             {section === 'orders' ? <OrdersPage /> : null}
+            {section === 'activity' ? <ActivityPage /> : null}
           </main>
         </SidebarInset>
       </SidebarProvider>
