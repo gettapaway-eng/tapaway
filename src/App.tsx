@@ -9,10 +9,15 @@ import { Hero } from '@/components/site/hero';
 import { Features } from '@/components/site/features';
 import { Steps } from '@/components/site/steps';
 import { Footer } from '@/components/site/footer';
+import { CartProvider } from '@/lib/cart';
 
 // Lazy so the Supabase client (and its env check) only loads on the admin
 // subdomain — the marketing site never pays for it, and can't be broken by it.
 const Admin = lazy(() => import('@/pages/admin'));
+// The store ships in its own chunks too: the country list, form library and
+// dropdowns never weigh on the homepage.
+const Shop = lazy(() => import('@/pages/shop'));
+const Checkout = lazy(() => import('@/pages/checkout'));
 
 const queryClient = new QueryClient();
 
@@ -40,11 +45,23 @@ function Home() {
   );
 }
 
+function Store({ page: Page }: { page: typeof Shop }) {
+  return (
+    <CartProvider>
+      <Suspense fallback={<div className="min-h-svh bg-white" />}>
+        <Page />
+      </Suspense>
+    </CartProvider>
+  );
+}
+
 function Router() {
   if (isAdminHost) return <AdminApp />;
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/shop">{() => <Store page={Shop} />}</Route>
+      <Route path="/checkout">{() => <Store page={Checkout} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

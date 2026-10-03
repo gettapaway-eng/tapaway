@@ -10,34 +10,22 @@ import {
 } from './_lib/guards.js';
 import { supabaseAdmin } from './_lib/supabase.js';
 import { CURRENCY, MAX_QUANTITY_PER_PACK, PACKS, priceCart, type PackId } from '../shared/packs.js';
+import { fieldErrors, orderFieldsSchema, toOrderContact } from '../shared/order.js';
 
-// Pre-orders: no payment yet. The order is a reservation with shipping
-// details; totals are recomputed here from shared/packs.ts and snapshotted
+// Pre-orders, held by a deposit (DEPOSIT_CENTS in shared/packs.ts) taken
+// with Dodo Payments — not wired in here yet. The order is a reservation with
+// shipping details; totals are recomputed here from shared/packs.ts and snapshotted
 // into the row, so neither a tampered request nor a later price change can
 // alter what was ordered.
 
 const ratelimit = makeRateLimit('orders', 5, '1 h'); // 5 orders / hour / IP
 
 const packIds = PACKS.map((pack) => pack.id) as [PackId, ...PackId[]];
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .optional()
-    .transform((value) => (value ? value : null));
 
-const bodySchema = z.object({
-  email: z.string().trim().toLowerCase().email().max(254),
-  fullName: z.string().trim().min(1).max(120),
-  phone: optionalText(40),
-  addressLine1: z.string().trim().min(1).max(200),
-  addressLine2: optionalText(200),
-  city: z.string().trim().min(1).max(100),
-  region: optionalText(100),
-  postalCode: z.string().trim().min(1).max(20),
-  country: z.string().trim().min(2).max(56),
-  notes: optionalText(500),
+// Contact and address rules live in shared/order.ts — the exact schema the
+// checkout form validates with. This wrapper only adds what the form doesn't
+// own: the cart lines and the honeypot.
+const envelopeSchema = z.object({
   items: z
     .array(
       z.object({
@@ -70,12 +58,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const parsed = bodySchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ ok: false, error: 'invalid_input' });
+  const envelope = envelopeSchema.safeParse(req.body);
+  if (!envelope.success) {
+    res.status(400).json({ ok: false, error: 'invalid_cart' });
     return;
   }
-  const { company, items, ...customer } = parsed.data;
+  const { company, items } = envelope.data;
+
+  const fields = orderFieldsSchema.safeParse(req.body?.fields);
+  if (!fields.success) {
+    // Per-field messages so the form can point at the exact input, even if
+    // this server is newer than the page that was loaded.
+    res.status(400).json({ ok: false, error: 'invalid_input', fields: fieldErrors(fields.error) });
+    return;
+  }
+  const customer = toOrderContact(fields.data);
 
   if (isHoneypotTripped(company)) {
     // Same shape as a real success, with a reference that matches no order.
@@ -93,7 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   for (const item of items) merged.set(item.packId, (merged.get(item.packId) ?? 0) + item.quantity);
   const cart = priceCart([...merged].map(([packId, quantity]) => ({ packId, quantity })));
   if (cart.lines.length === 0 || cart.lines.length !== merged.size) {
-    res.status(400).json({ ok: false, error: 'invalid_input' });
+    res.status(400).json({ ok: false, error: 'invalid_cart' });
     return;
   }
 

@@ -44,6 +44,17 @@ export const PACKS: readonly Pack[] = [
 
 export const MAX_QUANTITY_PER_PACK = 10;
 
+/**
+ * Paid at checkout (via Dodo Payments) to hold a pre-order: one deposit per
+ * order, whatever's in it. The rest of the total is due when we ship.
+ */
+export const DEPOSIT_CENTS = 500;
+
+/** What's left after the deposit — never negative, even for a tiny order. */
+export function balanceCents(subtotalCents: number): number {
+  return Math.max(0, subtotalCents - DEPOSIT_CENTS);
+}
+
 export function findPack(id: string): Pack | undefined {
   return PACKS.find((pack) => pack.id === id);
 }

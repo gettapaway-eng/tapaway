@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { ShoppingBag } from 'lucide-react';
 import { Logomark } from '@/components/site/logo';
@@ -5,6 +6,13 @@ import { useCart } from '@/lib/cart';
 
 export function ShopHeader() {
   const { itemCount } = useCart();
+  // Pulse the count when it goes up — not on first paint, not when it drops.
+  const previous = useRef(itemCount);
+  const [bump, setBump] = useState(0);
+  useEffect(() => {
+    if (itemCount > previous.current) setBump((value) => value + 1);
+    previous.current = itemCount;
+  }, [itemCount]);
 
   return (
     <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
@@ -21,8 +29,10 @@ export function ShopHeader() {
         <ShoppingBag className="size-4" strokeWidth={1.75} />
         Cart
         <span
-          className="tabular grid h-5 min-w-5 place-items-center rounded-full bg-zinc-900 px-1.5 text-[11px] font-semibold text-white transition-opacity duration-150 data-[empty=true]:bg-zinc-100 data-[empty=true]:text-zinc-500"
+          key={bump}
+          className="tabular grid h-5 min-w-5 place-items-center rounded-full bg-[var(--ink)] px-1.5 text-[11px] font-semibold text-white transition-opacity duration-150 data-[empty=true]:bg-zinc-100 data-[empty=true]:text-zinc-500 data-[bump=true]:cart-bump"
           data-empty={itemCount === 0}
+          data-bump={bump > 0}
         >
           {itemCount}
         </span>

@@ -157,6 +157,11 @@
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
   --focus-blue: #2f7bf6;
   --graphite: #4b4f55;
+  /* Shop palette, lifted from the brand film: its sky, the tag's graphite,
+     and the flytraps' green for the one moment of confirmation. */
+  --sky: #63aee8;
+  --ink: #26282c;
+  --leaf: #4f8f2a;
 }
 
 @layer utilities {
@@ -182,6 +187,167 @@
 @media (prefers-reduced-motion: reduce) {
   .press:active:not(:disabled) {
     transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Shop menus (checkout dropdowns). A light material that grows out of the
+   control that opened it, and leaves faster than it arrived.
+   --------------------------------------------------------------------------- */
+.shop-menu {
+  background: rgb(255 255 255 / 0.88);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.06),
+    0 2px 6px -2px rgb(0 0 0 / 0.08),
+    0 18px 40px -12px rgb(0 0 0 / 0.22);
+  transform-origin: var(--radix-popover-content-transform-origin);
+}
+.shop-menu[data-state='open'] {
+  animation: shop-menu-in 200ms var(--ease-out-strong);
+}
+.shop-menu[data-state='closed'] {
+  animation: shop-menu-out 130ms ease-out forwards;
+}
+@keyframes shop-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(var(--menu-shift, -4px));
+  }
+}
+@keyframes shop-menu-out {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+.shop-menu[data-side='top'] {
+  --menu-shift: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop-menu[data-state='open'] {
+    animation: shop-fade-in 150ms ease;
+  }
+  .shop-menu[data-state='closed'] {
+    animation: shop-fade-out 100ms ease forwards;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .shop-menu {
+    background: #fff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+@keyframes shop-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes shop-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Checkout steps slide in from the side they're coming from, so moving on
+   and stepping back read as opposite directions. Short, so it never waits. */
+.shop-step {
+  animation: shop-step-in 240ms var(--ease-out-strong) both;
+}
+.shop-step[data-dir='back'] {
+  --step-from: -14px;
+}
+@keyframes shop-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--step-from, 14px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop-step {
+    animation: shop-fade-in 160ms ease both;
+  }
+}
+
+/* The "Reserved" stamp: lands once, after the label has settled. A stamp
+   hits and stops — strong ease-out, no bounce. */
+.label-stamp {
+  transform: rotate(-12deg);
+  animation: label-stamp 280ms var(--ease-out-strong) 560ms both;
+}
+@keyframes label-stamp {
+  from {
+    opacity: 0;
+    transform: rotate(-12deg) scale(1.25);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .label-stamp {
+    animation: shop-fade-in 200ms ease 300ms both;
+  }
+}
+
+/* Shop stage: extra tags settle onto the stage when a bigger pack is chosen.
+   Transitions (not keyframes) so flicking between packs retargets mid-flight;
+   leaving is quicker than arriving. */
+.stage-companion {
+  transition:
+    opacity 240ms var(--ease-out-strong),
+    translate 240ms var(--ease-out-strong),
+    scale 240ms var(--ease-out-strong);
+}
+.stage-companion[data-visible='false'] {
+  opacity: 0;
+  translate: 0 14px;
+  scale: 0.92;
+  transition-duration: 160ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage-companion,
+  .stage-companion[data-visible='false'] {
+    translate: none;
+    scale: none;
+  }
+}
+
+/* A line of copy that changes with a choice: fade, no movement. */
+.shop-fade {
+  animation: shop-fade-in 180ms ease-out;
+}
+
+/* Cart count: one small pulse when something lands in it. */
+.cart-bump {
+  animation: cart-bump 220ms var(--ease-out-strong);
+}
+@keyframes cart-bump {
+  40% {
+    transform: scale(1.18);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cart-bump {
+    animation: none;
+  }
+}
+
+/* Staggered entrance for the confirmation screen: once per order, so it can
+   afford a moment of ceremony. */
+.shop-rise {
+  animation: shop-rise 520ms var(--ease-out-strong) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes shop-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop-rise {
+    animation: shop-fade-in 300ms ease both;
   }
 }
 
