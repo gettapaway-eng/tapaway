@@ -1,5 +1,7 @@
+'use client';
+
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { MAX_QUANTITY_PER_PACK, findPack, priceCart, type CartLine, type PackId } from '../../shared/packs';
+import { MAX_QUANTITY_PER_PACK, findPack, priceCart, type CartLine, type PackId } from '@shared/packs';
 
 // The cart lives in the browser only — nothing is reserved until checkout
 // posts to /api/orders, which re-prices everything server-side. Persisted to
@@ -9,6 +11,8 @@ const STORAGE_KEY = 'tapaway.cart.v1';
 
 interface CartContextValue {
   lines: CartLine[];
+  /** False until the saved cart has been read; the server always renders empty. */
+  ready: boolean;
   priced: ReturnType<typeof priceCart>;
   itemCount: number;
   add: (packId: PackId) => void;
@@ -43,15 +47,24 @@ function load(): CartLine[] {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [lines, setLines] = useState<CartLine[]>(load);
+  // Starts empty on server and client alike so hydration matches, then the
+  // saved cart is read once mounted.
+  const [lines, setLines] = useState<CartLine[]>([]);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    setLines(load());
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return; // don't overwrite the saved cart with the empty first render
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
     } catch {
       // Private mode or storage disabled: the cart still works for this visit.
     }
-  }, [lines]);
+  }, [lines, ready]);
 
   const setQuantity = useCallback((packId: PackId, quantity: number) => {
     const clamped = Math.max(0, Math.min(MAX_QUANTITY_PER_PACK, Math.floor(quantity)));
@@ -82,6 +95,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const priced = priceCart(lines);
     return {
       lines,
+      ready,
       priced,
       itemCount: lines.reduce((sum, line) => sum + line.quantity, 0),
       add,
@@ -89,7 +103,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       remove,
       clear,
     };
-  }, [lines, add, setQuantity, remove, clear]);
+  }, [lines, ready, add, setQuantity, remove, clear]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

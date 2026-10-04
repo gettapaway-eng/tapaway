@@ -1,3 +1,5 @@
+'use client';
+
 import { useMemo, type ReactNode } from 'react';
 import { Logomark } from '@/components/site/logo';
 import { cn } from '@/lib/utils';
@@ -8,7 +10,7 @@ import {
   nationalDigits,
   normalizePostal,
   regionsFor,
-} from '../../../shared/address';
+} from '@shared/address';
 
 // The parcel label the checkout is really filling in. It writes itself as
 // fields are typed, so the review step is just "read the label". Blank lines

@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -8,7 +10,7 @@ import { cn } from '@/lib/utils';
 const FRAMES = 36;
 const COLUMNS = 6;
 const PX_PER_FRAME = 7; // drag distance per frame — about one full turn per 250px
-const SPRITE = `${import.meta.env.BASE_URL}tag/turntable.webp`;
+const SPRITE = `/tag/turntable.webp`;
 
 function wrap(frame: number): number {
   return ((Math.round(frame) % FRAMES) + FRAMES) % FRAMES;
@@ -143,7 +145,7 @@ export function TagStack({ count, className }: { count: number; className?: stri
       {Array.from({ length: count }, (_, index) => (
         <img
           key={index}
-          src={`${import.meta.env.BASE_URL}tag/tag-thumb.webp`}
+          src={`/tag/tag-thumb.webp`}
           alt=""
           className="size-8 drop-shadow-[0_1px_1px_rgba(0,0,0,0.12)]"
           style={{ marginLeft: index === 0 ? 0 : -18 }}

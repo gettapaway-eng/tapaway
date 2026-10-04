@@ -9,10 +9,10 @@ import {
   regionsFor,
   shipsTo,
   toE164,
-} from './address.js';
+} from './address';
 
 // The pre-order form's rules, in one place. The checkout page validates with
-// this schema as you type; api/orders.ts parses the request with the very same
+// this schema as you type; app/api/orders/route.ts parses the request with the very same
 // schema. Parsing is idempotent — the output is the same shape as the input,
 // just trimmed and normalised — so the browser can send exactly what it
 // validated and the server re-checks it without anything drifting.

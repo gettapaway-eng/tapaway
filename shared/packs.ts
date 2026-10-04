@@ -1,5 +1,5 @@
 // The catalog: tag packs and their prices. Imported by the shop UI *and* by
-// api/orders.ts, which recomputes every total from this file — the browser's
+// app/api/orders/route.ts, which recomputes every total from this file — the browser's
 // idea of a price is never trusted. Changing a price here changes it in both
 // places on the next deploy; orders already placed keep the price they were
 // placed at (snapshotted into `orders.items`).

@@ -47,3 +47,7 @@ Thumbs.db
 
 # Supabase project files
 supabase/
+
+# Next.js
+.next
+next-env.d.ts

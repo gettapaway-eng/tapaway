@@ -1,3 +1,5 @@
+'use client';
+
 import { motion } from "framer-motion";
 import { Reveal, WordReveal, easeSmooth } from "@/components/site/motion";
 import { Logomark } from "@/components/site/logo";
@@ -9,8 +11,8 @@ export function Hero() {
       <div className="relative mx-auto min-h-[calc(100svh-6rem)] overflow-hidden rounded-2xl sm:min-h-[calc(100svh-8rem)]">
         <video
           className="absolute inset-0 h-full w-full object-cover"
-          src={`${import.meta.env.BASE_URL}kling_20260804_VIDEO_Animate_th_1940_0.mp4`}
-          poster={`${import.meta.env.BASE_URL}hero-poster.jpg`}
+          src={`/kling_20260804_VIDEO_Animate_th_1940_0.mp4`}
+          poster={`/hero-poster.jpg`}
           autoPlay
           loop
           muted

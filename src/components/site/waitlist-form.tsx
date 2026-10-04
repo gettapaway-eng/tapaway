@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, type SubmitEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { easeSmooth } from "@/components/site/motion";

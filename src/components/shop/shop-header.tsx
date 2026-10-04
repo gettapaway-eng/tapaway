@@ -1,5 +1,7 @@
+'use client';
+
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'wouter';
+import Link from 'next/link';
 import { ShoppingBag } from 'lucide-react';
 import { Logomark } from '@/components/site/logo';
 import { useCart } from '@/lib/cart';

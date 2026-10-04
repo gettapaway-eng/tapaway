@@ -1,5 +1,5 @@
 // Address rules for the pre-order form. Imported by the checkout UI *and* by
-// api/orders.ts, so the field the browser shows and the check the server runs
+// app/api/orders/route.ts, so the field the browser shows and the check the server runs
 // are always the same rule — a postal code that passes on screen can't bounce
 // at the API, and a hand-crafted request can't sneak past either.
 //
