@@ -27,6 +27,3 @@ export const gitBranch: string | undefined =
 
 /** True on the long-lived `dev` branch (dev.tapaway.today), not other previews. */
 export const isDevBranch = isPreview && gitBranch === 'dev';
-
-/** Short label for logs, badges and alerts: "production", "preview (dev)", "development". */
-export const envLabel = isPreview && gitBranch ? `preview (${gitBranch})` : appEnv;

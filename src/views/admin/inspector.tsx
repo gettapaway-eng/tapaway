@@ -62,7 +62,9 @@ export function Inspector({
                     <X className="size-3.5" strokeWidth={2.25} />
                   </Dialog.Close>
                 </header>
-                <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">{children}</div>
+                <div data-lenis-prevent className="admin-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5">
+                  {children}
+                </div>
                 {footer ? <footer className="border-t border-border px-5 py-4">{footer}</footer> : null}
               </motion.div>
             </Dialog.Content>

@@ -2,29 +2,33 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Check, Copy, Mail } from 'lucide-react';
+import { Check } from 'lucide-react';
 import HoldButton from '@/components/registry/hold-button';
 import { DiscreteTabs } from '@/components/registry/discrete-tabs';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useAdminNav } from './context';
 import {
+  orderStage,
   tagStatus,
   useInventory,
+  usePackedTags,
   useOrders,
   useReleaseTag,
   useSetProvisioner,
   useUsers,
   type InventoryRow,
-  type OrderRow,
+  type PackedTags,
   type TagStatus,
   type UserRow,
 } from './data';
-import { csvDownload, formatPrice, hardwareIdHex } from './format';
+import { hardwareIdHex } from './format';
 import { DetailGroup, DetailRow, Inspector } from './inspector';
+import { ORDER_STAGE } from './orders';
 import {
   absoluteLabel,
   Cell,
+  CopyButton,
   DataTable,
   PageHeader,
   Pill,
@@ -43,35 +47,13 @@ const includes = (haystack: (string | null | undefined)[], needle: string) => {
   return !query || haystack.some((value) => value?.toLowerCase().includes(query));
 };
 
-function copy(text: string, what: string) {
-  navigator.clipboard.writeText(text).then(
-    () => toast.success(`${what} copied`),
-    () => toast.error(`Couldn't copy ${what.toLowerCase()}`),
-  );
-}
-
-function CopyButton({ text, what }: { text: string; what: string }) {
-  return (
-    <button
-      type="button"
-      onClick={(event) => {
-        event.stopPropagation();
-        copy(text, what);
-      }}
-      className="press -mr-1 grid size-6 place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-[var(--tint)]"
-      aria-label={`Copy ${what.toLowerCase()}`}
-    >
-      <Copy className="size-3.5" />
-    </button>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Tags
 // ---------------------------------------------------------------------------
 
 export const TAG_STATUS: Record<TagStatus, { label: string; tone: PillTone }> = {
   registered: { label: 'Registered', tone: 'green' },
+  shipped: { label: 'Shipped', tone: 'gray' },
   available: { label: 'Available', tone: 'blue' },
   unconfirmed: { label: 'Unconfirmed', tone: 'amber' },
 };
@@ -80,18 +62,19 @@ export function TagsPage() {
   const inventory = useInventory();
   const { selection, select, role, email } = useAdminNav();
   const isAdmin = role === 'admin';
+  const packed = usePackedTags(isAdmin).map;
   const [filter, setFilter] = useState<'all' | TagStatus>('all');
   const [query, setQuery] = useState('');
 
   const rows = inventory.data ?? [];
   const counts = useMemo(() => {
-    const result = { registered: 0, available: 0, unconfirmed: 0 };
-    for (const row of rows) result[tagStatus(row)] += 1;
+    const result = { registered: 0, shipped: 0, available: 0, unconfirmed: 0 };
+    for (const row of rows) result[tagStatus(row, packed)] += 1;
     return result;
-  }, [rows]);
+  }, [rows, packed]);
   const visible = rows.filter(
     (row) =>
-      (filter === 'all' || tagStatus(row) === filter) &&
+      (filter === 'all' || tagStatus(row, packed) === filter) &&
       includes([hardwareIdHex(row.hardware_id), row.owner_email, row.tag_name], query),
   );
   const selected = selection?.kind === 'tag' ? rows.find((row) => row.hardware_id === selection.id) : undefined;
@@ -120,8 +103,9 @@ export function TagsPage() {
           onChange={setFilter}
           options={[
             { value: 'all', label: 'All', count: rows.length },
-            { value: 'registered', label: 'Registered', count: counts.registered },
             { value: 'available', label: 'Available', count: counts.available },
+            ...(isAdmin ? [{ value: 'shipped' as const, label: 'Shipped', count: counts.shipped }] : []),
+            { value: 'registered', label: 'Registered', count: counts.registered },
             { value: 'unconfirmed', label: 'Unconfirmed', count: counts.unconfirmed },
           ]}
         />
@@ -145,7 +129,7 @@ export function TagsPage() {
           />
         ) : (
           visible.map((row) => {
-            const status = TAG_STATUS[tagStatus(row)];
+            const status = TAG_STATUS[tagStatus(row, packed)];
             return (
               <Row
                 key={row.hardware_id}
@@ -180,7 +164,7 @@ export function TagsPage() {
         )}
       </DataTable>
 
-      <TagInspector row={selected} canManage={isAdmin} onClose={() => select(null)} />
+      <TagInspector row={selected} canManage={isAdmin} packed={packed} onClose={() => select(null)} />
     </>
   );
 }
@@ -230,15 +214,21 @@ function MyProvisioning({ rows, email, prominent }: { rows: InventoryRow[]; emai
 function TagInspector({
   row,
   canManage,
+  packed,
   onClose,
 }: {
   row: InventoryRow | undefined;
   /** Admins see the owner and can release; provisioners get a read-only view. */
   canManage: boolean;
+  packed: PackedTags;
   onClose: () => void;
 }) {
   const release = useReleaseTag();
-  const status = row ? TAG_STATUS[tagStatus(row)] : null;
+  const { select } = useAdminNav();
+  const orders = useOrders(canManage);
+  const status = row ? TAG_STATUS[tagStatus(row, packed)] : null;
+  const packedOrderId = row ? packed.get(row.hardware_id) : undefined;
+  const packedOrder = packedOrderId ? orders.data?.find((order) => order.id === packedOrderId) : undefined;
   const hex = row ? hardwareIdHex(row.hardware_id) : '';
 
   return (
@@ -285,6 +275,23 @@ function TagInspector({
     >
       {row ? (
         <>
+          {packedOrder ? (
+            <DetailGroup title="Pre-order">
+              <DetailRow label="Shipped in">
+                <button
+                  type="button"
+                  onClick={() => select({ kind: 'order', id: packedOrder.id })}
+                  className="tabular font-mono text-[12px] font-semibold text-[var(--tint)] outline-none hover:underline focus-visible:ring-2 focus-visible:ring-[var(--tint)]"
+                >
+                  {packedOrder.reference}
+                </button>
+              </DetailRow>
+              <DetailRow label="To">{packedOrder.full_name}</DetailRow>
+              <DetailRow label="Status">
+                <Pill tone={ORDER_STAGE[orderStage(packedOrder)].tone}>{ORDER_STAGE[orderStage(packedOrder)].label}</Pill>
+              </DetailRow>
+            </DetailGroup>
+          ) : null}
           <DetailGroup title={canManage ? 'Ownership' : 'Registration'}>
             {canManage ? (
               <DetailRow label="Owner">{row.owner_email ?? <span className="text-muted-foreground">Nobody</span>}</DetailRow>
@@ -490,217 +497,6 @@ function UserInspector({
               {row.live_tag_count - ownedTags.length === 1 ? '' : 's'} of tags set up before provisioning existed. Those
               aren't in the inventory, so they can't be listed or released here.
             </p>
-          ) : null}
-        </>
-      ) : null}
-    </Inspector>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Pre-orders (read-only for now)
-// ---------------------------------------------------------------------------
-
-export const ORDER_STATUS: Record<OrderRow['status'], { label: string; tone: PillTone }> = {
-  pending: { label: 'Pending', tone: 'amber' },
-  confirmed: { label: 'Confirmed', tone: 'blue' },
-  shipped: { label: 'Shipped', tone: 'green' },
-  cancelled: { label: 'Cancelled', tone: 'red' },
-};
-
-export const PAYMENT_STATUS: Record<OrderRow['payment_status'], { label: string; tone: PillTone }> = {
-  paid: { label: 'Deposit paid', tone: 'green' },
-  unpaid: { label: 'Unpaid', tone: 'gray' },
-  failed: { label: 'Payment failed', tone: 'red' },
-  refunded: { label: 'Refunded', tone: 'gray' },
-};
-
-const itemsSummary = (row: OrderRow) => row.items.map((item) => `${item.quantity} × ${item.name}`).join(', ');
-
-export function OrdersPage() {
-  const orders = useOrders();
-  const { selection, select } = useAdminNav();
-  const [query, setQuery] = useState('');
-  const rows = orders.data ?? [];
-  const visible = rows.filter((row) => includes([row.reference, row.email, row.full_name, row.country], query));
-  const selected = selection?.kind === 'order' ? rows.find((row) => row.id === selection.id) : undefined;
-
-  return (
-    <>
-      <PageHeader title="Pre-orders" description="Reservations from the shop. A deposit is taken at checkout; the rest when it ships.">
-        <ToolButton
-          icon="download"
-          disabled={visible.length === 0}
-          onClick={() => {
-            csvDownload('tapaway-preorders.csv', [
-              ['reference', 'status', 'payment', 'deposit', 'paid at', 'placed', 'name', 'email', 'phone', 'address', 'city', 'region', 'postal code', 'country', 'items', 'tags', 'total', 'notes'],
-              ...visible.map((row) => [
-                row.reference,
-                row.status,
-                row.payment_status,
-                formatPrice(row.deposit_cents, row.currency),
-                row.paid_at ?? '',
-                row.created_at,
-                row.full_name,
-                row.email,
-                row.phone ?? '',
-                [row.address_line1, row.address_line2].filter(Boolean).join(', '),
-                row.city,
-                row.region ?? '',
-                row.postal_code,
-                row.country,
-                itemsSummary(row),
-                String(row.total_tags),
-                formatPrice(row.subtotal_cents, row.currency),
-                row.notes ?? '',
-              ]),
-            ]);
-            toast.success(`Exported ${visible.length} pre-order${visible.length === 1 ? '' : 's'}`);
-          }}
-        >
-          Export
-        </ToolButton>
-        <ToolButton icon="refresh" spinning={orders.isFetching} onClick={() => orders.refetch()}>
-          Refresh
-        </ToolButton>
-      </PageHeader>
-
-      <Toolbar>
-        <SearchField value={query} onChange={setQuery} placeholder="Search reference, name, email" />
-      </Toolbar>
-
-      <DataTable head={['Reference', 'Customer', 'Items', 'Ship to', 'Placed']}>
-        {orders.isLoading ? (
-          <SkeletonRows columns={5} />
-        ) : orders.error ? (
-          <TableMessage columns={5} tone="error" title="Couldn't load pre-orders" detail={orders.error.message} />
-        ) : visible.length === 0 ? (
-          <TableMessage
-            columns={5}
-            title={rows.length === 0 ? 'No pre-orders yet' : 'No pre-orders match'}
-            detail={rows.length === 0 ? 'Reservations from /shop appear here.' : undefined}
-          />
-        ) : (
-          visible.map((row) => {
-            const status = ORDER_STATUS[row.status];
-            return (
-              <Row
-                key={row.id}
-                label={`Pre-order ${row.reference}`}
-                selected={selected?.id === row.id}
-                onOpen={() => select({ kind: 'order', id: row.id })}
-              >
-                <Cell>
-                  <span className="inline-flex items-center gap-2">
-                    <span className="tabular font-mono text-[12px] font-semibold">{row.reference}</span>
-                    <Pill tone={status.tone}>{status.label}</Pill>
-                    <Pill tone={PAYMENT_STATUS[row.payment_status].tone}>{PAYMENT_STATUS[row.payment_status].label}</Pill>
-                  </span>
-                </Cell>
-                <Cell>{row.full_name}</Cell>
-                <Cell>
-                  {itemsSummary(row)}
-                  <span className="tabular ml-2 text-muted-foreground">{formatPrice(row.subtotal_cents, row.currency)}</span>
-                </Cell>
-                <Cell className="text-muted-foreground">{[row.city, row.country].filter(Boolean).join(', ')}</Cell>
-                <Cell className="text-muted-foreground">
-                  <RelativeTime value={row.created_at} />
-                </Cell>
-              </Row>
-            );
-          })
-        )}
-      </DataTable>
-
-      <OrderInspector row={selected} onClose={() => select(null)} />
-    </>
-  );
-}
-
-function OrderInspector({ row, onClose }: { row: OrderRow | undefined; onClose: () => void }) {
-  const status = row ? ORDER_STATUS[row.status] : null;
-  const address = row
-    ? [row.full_name, row.address_line1, row.address_line2, [row.city, row.region, row.postal_code].filter(Boolean).join(' '), row.country]
-        .filter(Boolean)
-        .join('\n')
-    : '';
-
-  return (
-    <Inspector
-      open={Boolean(row)}
-      onOpenChange={(open) => !open && onClose()}
-      title={<span className="tabular font-mono">{row?.reference}</span>}
-      subtitle={
-        row && status ? (
-          <span className="inline-flex items-center gap-2">
-            <Pill tone={status.tone}>{status.label}</Pill>
-            Placed {absoluteLabel(row.created_at)}
-          </span>
-        ) : null
-      }
-      footer={
-        row ? (
-          <a
-            href={`mailto:${row.email}?subject=${encodeURIComponent(`Your tapaway pre-order ${row.reference}`)}`}
-            className="press flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary text-[13px] font-semibold text-primary-foreground outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--tint)]"
-          >
-            <Mail className="size-4" /> Email {row.full_name.split(' ')[0]}
-          </a>
-        ) : null
-      }
-    >
-      {row ? (
-        <>
-          <DetailGroup title="Items">
-            {row.items.map((item, index) => (
-              <DetailRow key={index} label={`${item.quantity} × ${item.name}`}>
-                <span className="tabular text-muted-foreground">{item.quantity * item.tags} tags</span>
-              </DetailRow>
-            ))}
-            <DetailRow label="Total">
-              <span className="tabular font-semibold">{formatPrice(row.subtotal_cents, row.currency)}</span>
-            </DetailRow>
-          </DetailGroup>
-
-          <DetailGroup title="Deposit">
-            <DetailRow label="Status">
-              <Pill tone={PAYMENT_STATUS[row.payment_status].tone}>{PAYMENT_STATUS[row.payment_status].label}</Pill>
-            </DetailRow>
-            <DetailRow label="Amount">
-              <span className="tabular">{formatPrice(row.deposit_cents, row.currency)}</span>
-            </DetailRow>
-            {row.paid_at ? <DetailRow label="Paid">{absoluteLabel(row.paid_at)}</DetailRow> : null}
-            {row.payment_id ? (
-              <DetailRow label="Dodo payment">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="tabular truncate font-mono text-[12px]">{row.payment_id}</span>
-                  <CopyButton text={row.payment_id} what="Payment ID" />
-                </span>
-              </DetailRow>
-            ) : null}
-          </DetailGroup>
-
-          <DetailGroup title="Customer">
-            <DetailRow label="Email">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="truncate">{row.email}</span>
-                <CopyButton text={row.email} what="Email" />
-              </span>
-            </DetailRow>
-            {row.phone ? <DetailRow label="Phone">{row.phone}</DetailRow> : null}
-          </DetailGroup>
-
-          <DetailGroup title="Ship to">
-            <div className="flex items-start justify-between gap-3 px-3.5 py-3">
-              <address className="whitespace-pre-line not-italic leading-relaxed">{address}</address>
-              <CopyButton text={address} what="Address" />
-            </div>
-          </DetailGroup>
-
-          {row.notes ? (
-            <DetailGroup title="Notes">
-              <p className="whitespace-pre-line px-3.5 py-3">{row.notes}</p>
-            </DetailGroup>
           ) : null}
         </>
       ) : null}

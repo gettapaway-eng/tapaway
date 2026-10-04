@@ -28,7 +28,8 @@ import { AdminNavContext, ROLE_SECTIONS, type AdminNav, type Section, type Selec
 import { useAdminRole, useInventory, useOrders, useUsers, useWaitlist, type AdminRole } from './data';
 import { OverviewPage } from './overview';
 import { ActivityPage } from './activity';
-import { OrdersPage, TagsPage, UsersPage } from './pages';
+import { OrdersPage } from './orders';
+import { TagsPage, UsersPage } from './pages';
 import { WaitlistPage } from './waitlist';
 import { AdminSignIn } from './sign-in';
 import { AdminThemeProvider, ThemeSwitch, useAdminTheme } from './theme';

@@ -47,14 +47,15 @@ export default function CheckoutComplete() {
         const query = new URLSearchParams({ ref, ...(paymentId ? { payment_id: paymentId } : {}) });
         const response = await fetch(`/api/orders/status?${query}`, { cache: 'no-store' });
         const body = (await response.json().catch(() => null)) as
-          | { ok: true; paymentStatus: 'unpaid' | 'paid' | 'failed' | 'refunded' }
+          | { ok: true; paymentStatus: 'unpaid' | 'paid' | 'failed' | 'refunded'; receipt?: Placed }
           | { ok: false; error: string }
           | null;
         if (id !== run.current) return;
 
         if (body?.ok && body.paymentStatus === 'paid') {
-          // Read the snapshot before clearing it, then let the cart go.
-          const placed = loadPending(ref);
+          // This tab's snapshot if it has one, else the server's copy (sent
+          // only with the matching payment_id). Read before clearing.
+          const placed = loadPending(ref) ?? body.receipt ?? null;
           clearAfterPayment();
           clear();
           setState({ kind: 'paid', placed });
@@ -86,33 +87,38 @@ export default function CheckoutComplete() {
       <ShopHeader />
       <main className="mx-auto max-w-[27rem] px-4 pb-24 pt-10 sm:pt-16">
         {state.kind === 'checking' ? (
-          <Message title="Confirming your deposit…" spinner>
-            This takes a few seconds. Keep this page open.
-          </Message>
+          <div className="shop-rise flex min-h-[50svh] flex-col items-center justify-center text-center" role="status">
+            <svg className="size-7 animate-spin [animation-duration:650ms]" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1.75" />
+              <path d="M14.5 8A6.5 6.5 0 0 0 8 1.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+            </svg>
+            <h1 className="mt-5 text-[1.375rem] font-semibold tracking-[-0.02em]">Confirming your payment…</h1>
+            <p className="mt-1.5 text-[15px] text-zinc-500">This takes a few seconds. Keep this page open.</p>
+          </div>
         ) : state.kind === 'paid' ? (
           // Paid, but opened somewhere without the snapshot (another tab or device).
-          <Message title="Your tags are reserved">
-            Your deposit is paid. Your reference is <Reference value={reference} />, and we’ll email you before
-            anything ships.
+          <Message title="Your pre-order is confirmed">
+            Your payment went through. Your reference is <Reference value={reference} />, and we’ll email you
+            before anything ships.
           </Message>
         ) : state.kind === 'failed' ? (
           <Message
             title="Your payment didn’t go through"
             action={<PrimaryLink href="/checkout?step=review">Try again</PrimaryLink>}
           >
-            Nothing was charged, and your details and cart are still saved.
+            Nothing was charged, and your details are still saved.
           </Message>
         ) : state.kind === 'slow' ? (
           <Message
             title="Still confirming your payment"
             action={<PrimaryButton onClick={() => window.location.reload()}>Check again</PrimaryButton>}
           >
-            This is taking longer than usual. If you paid, your reservation is safe: reference{' '}
+            This is taking longer than usual. If you paid, your pre-order is safe: reference{' '}
             <Reference value={reference} />, and we’ll email you a confirmation.
           </Message>
         ) : (
-          <Message title="We couldn’t find that order" action={<PrimaryLink href="/shop">Go to the shop</PrimaryLink>}>
-            The link may be incomplete. If you paid a deposit, the confirmation email has your reference.
+          <Message title="We couldn’t find that pre-order" action={<PrimaryLink href="/shop">Go to the shop</PrimaryLink>}>
+            The link may be incomplete. If you paid, the confirmation email has your reference.
           </Message>
         )}
       </main>
@@ -120,25 +126,9 @@ export default function CheckoutComplete() {
   );
 }
 
-function Message({
-  title,
-  spinner,
-  action,
-  children,
-}: {
-  title: string;
-  spinner?: boolean;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
+function Message({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <div className="shop-rise">
-      {spinner ? (
-        <svg className="mb-6 size-6 animate-spin [animation-duration:650ms]" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeOpacity="0.2" strokeWidth="2" />
-          <path d="M14.5 8A6.5 6.5 0 0 0 8 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      ) : null}
       <h1 className="text-[2rem] leading-[1.1] font-semibold tracking-[-0.03em]" aria-live="polite">
         {title}
       </h1>

@@ -2,12 +2,25 @@
 
 import { useMemo, type ReactNode } from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { ChevronRight, ClipboardList, Mail, Nfc } from 'lucide-react';
+import { ChevronRight, ClipboardList, Mail, Nfc, PackageCheck, Truck } from 'lucide-react';
 import CountUp from '@/components/registry/count-up';
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 import { useAdminNav } from './context';
-import { tagStatus, useInventory, useOrders, useUsers, useWaitlist, type InventoryRow } from './data';
+import {
+  isCommitted,
+  orderStage,
+  tagStatus,
+  useInventory,
+  useOrders,
+  usePackedTags,
+  useUsers,
+  useWaitlist,
+  type InventoryRow,
+  type OrderRow,
+  type PackedTags,
+} from './data';
+import { carrierName } from '@shared/carriers';
 import { hardwareIdHex } from './format';
 import { TAG_STATUS } from './pages';
 import { PageHeader, relativeLabel, absoluteLabel } from './ui';
@@ -19,6 +32,7 @@ export function OverviewPage() {
   const users = useUsers();
   const inventory = useInventory();
   const orders = useOrders();
+  const packed = usePackedTags().map;
   const { go, select } = useAdminNav();
 
   // Deleted signups don't count anywhere on the overview.
@@ -27,10 +41,10 @@ export function OverviewPage() {
   const preorders = orders.data ?? [];
 
   const lastWeek = signups.filter((row) => Date.now() - new Date(row.created_at).getTime() < 7 * DAY).length;
-  const registered = tags.filter((row) => tagStatus(row) === 'registered').length;
-  // A reservation counts once its deposit is paid; abandoned checkouts don't.
-  const paidPreorders = preorders.filter((row) => row.payment_status === 'paid' && row.status !== 'cancelled');
-  const reservedTags = paidPreorders.reduce((sum, row) => sum + row.total_tags, 0);
+  const registered = tags.filter((row) => tagStatus(row, packed) === 'registered').length;
+  const toShip = preorders.filter((row) => orderStage(row) === 'to_ship');
+  const onTheWay = preorders.filter((row) => orderStage(row) === 'shipped').length;
+  const tagsOwed = toShip.reduce((sum, row) => sum + row.total_tags, 0);
 
   // Cumulative signups per day, from the first signup to today.
   const growth = useMemo(() => {
@@ -62,13 +76,34 @@ export function OverviewPage() {
         what: row.source === 'autosend' ? 'Joined the waitlist (imported)' : 'Joined the waitlist',
         open: () => go('waitlist'),
       })),
-      ...preorders.slice(0, 8).map((row) => ({
-        at: row.created_at,
-        icon: ClipboardList,
-        who: row.full_name,
-        what: `Reserved ${row.total_tags} tag${row.total_tags === 1 ? '' : 's'} · ${row.reference}`,
-        open: () => select({ kind: 'order', id: row.id }),
-      })),
+      // Pre-orders count from payment; abandoned checkouts aren't news.
+      ...preorders
+        .filter((row) => row.paid_at)
+        .map((row) => ({
+          at: row.paid_at!,
+          icon: ClipboardList,
+          who: row.full_name,
+          what: `Pre-ordered ${row.total_tags} tag${row.total_tags === 1 ? '' : 's'} · ${row.reference}`,
+          open: () => select({ kind: 'order', id: row.id }),
+        })),
+      ...preorders
+        .filter((row) => row.shipped_at)
+        .map((row) => ({
+          at: row.shipped_at!,
+          icon: Truck,
+          who: row.full_name,
+          what: `Shipped ${row.reference} with ${carrierName(row.carrier)}`,
+          open: () => select({ kind: 'order', id: row.id }),
+        })),
+      ...preorders
+        .filter((row) => row.delivered_at)
+        .map((row) => ({
+          at: row.delivered_at!,
+          icon: PackageCheck,
+          who: row.full_name,
+          what: `Delivered ${row.reference}`,
+          open: () => select({ kind: 'order', id: row.id }),
+        })),
       ...tags
         .filter((row) => row.registered_at && row.owner_email)
         .map((row) => ({
@@ -119,9 +154,15 @@ export function OverviewPage() {
           loading={loading}
         />
         <Stat
-          label="Tags reserved"
-          value={reservedTags}
-          caption={`${paidPreorders.length} paid pre-order${paidPreorders.length === 1 ? '' : 's'}`}
+          label="Pre-orders to ship"
+          value={toShip.length}
+          caption={
+            toShip.length > 0
+              ? `${tagsOwed} tag${tagsOwed === 1 ? '' : 's'} to pack${onTheWay ? ` · ${onTheWay} on the way` : ''}`
+              : onTheWay
+                ? `${onTheWay} on the way`
+                : 'All caught up'
+          }
           onClick={() => go('orders')}
           loading={loading}
         />
@@ -133,8 +174,12 @@ export function OverviewPage() {
         </Panel>
 
         <div className="grid min-w-0 content-start gap-4">
+          <Panel title="Fulfilment" action={<PanelLink onClick={() => go('orders')}>Pre-orders</PanelLink>}>
+            <Fulfilment orders={preorders} tags={tags} packed={packed} />
+          </Panel>
+
           <Panel title="Tag pipeline" action={<PanelLink onClick={() => go('tags')}>Tags</PanelLink>}>
-            <TagPipeline tags={tags} />
+            <TagPipeline tags={tags} packed={packed} />
           </Panel>
 
           <Panel title="Recent activity">
@@ -329,13 +374,18 @@ function GrowthChart({ data }: { data: GrowthPoint[] }) {
   );
 }
 
-function TagPipeline({ tags }: { tags: InventoryRow[] }) {
+function TagPipeline({ tags, packed }: { tags: InventoryRow[]; packed: PackedTags }) {
   const total = tags.length;
-  const segments = (['registered', 'available', 'unconfirmed'] as const).map((status) => ({
+  const segments = (['registered', 'shipped', 'available', 'unconfirmed'] as const).map((status) => ({
     status,
-    count: tags.filter((row) => tagStatus(row) === status).length,
+    count: tags.filter((row) => tagStatus(row, packed) === status).length,
   }));
-  const color = { registered: 'bg-emerald-500', available: 'bg-[var(--tint)]', unconfirmed: 'bg-amber-500' } as const;
+  const color = {
+    registered: 'bg-emerald-500',
+    shipped: 'bg-foreground/35',
+    available: 'bg-[var(--tint)]',
+    unconfirmed: 'bg-amber-500',
+  } as const;
 
   if (total === 0) return <EmptyNote>No tags provisioned yet.</EmptyNote>;
   return (
@@ -364,3 +414,63 @@ function TagPipeline({ tags }: { tags: InventoryRow[] }) {
   );
 }
 
+
+/**
+ * Where every paid tag is — delivered, on the way, or still to pack — and
+ * whether there's stock to pack the rest. Counts tags, not orders: tags are
+ * what you pack and what inventory holds.
+ */
+function Fulfilment({ orders, tags, packed }: { orders: OrderRow[]; tags: InventoryRow[]; packed: PackedTags }) {
+  const committed = orders.filter(isCommitted);
+  const sum = (stage: ReturnType<typeof orderStage>) =>
+    committed.filter((row) => orderStage(row) === stage).reduce((total, row) => total + row.total_tags, 0);
+  const segments = [
+    { key: 'delivered', label: 'Delivered', count: sum('delivered'), color: 'bg-emerald-500' },
+    { key: 'shipped', label: 'On the way', count: sum('shipped'), color: 'bg-[var(--tint)]' },
+    { key: 'to_ship', label: 'To pack', count: sum('to_ship'), color: 'bg-amber-500' },
+  ];
+  const total = segments.reduce((value, segment) => value + segment.count, 0);
+  const owed = segments[2].count;
+  const inStock = tags.filter((row) => tagStatus(row, packed) === 'available').length;
+  const shortBy = owed - inStock;
+
+  if (total === 0) return <EmptyNote>Paid pre-orders will show here.</EmptyNote>;
+  return (
+    <div>
+      <div className="flex h-2 gap-[2px] overflow-hidden rounded-full bg-muted" role="img" aria-label="Pre-ordered tags by stage">
+        {segments
+          .filter((segment) => segment.count > 0)
+          .map((segment) => (
+            <span
+              key={segment.key}
+              className={cn('h-full first:rounded-l-full last:rounded-r-full', segment.color)}
+              style={{ width: `${(segment.count / total) * 100}%` }}
+            />
+          ))}
+      </div>
+      <ul className="mt-3 space-y-1.5">
+        {segments.map((segment) => (
+          <li key={segment.key} className="flex items-center gap-2">
+            <span className={cn('size-2 rounded-full', segment.color)} aria-hidden="true" />
+            <span className="flex-1">{segment.label}</span>
+            <span className="tabular text-muted-foreground">
+              {segment.count} tag{segment.count === 1 ? '' : 's'}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p
+        className={cn(
+          'type-caption mt-3 rounded-lg px-2.5 py-2',
+          shortBy > 0 ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300' : 'bg-muted text-muted-foreground',
+        )}
+      >
+        {shortBy > 0
+          ? `Short by ${shortBy} tag${shortBy === 1 ? '' : 's'}: ${owed} to pack, ${inStock} free in inventory. Provision more before shipping.`
+          : owed > 0
+            ? `${inStock} free tag${inStock === 1 ? '' : 's'} in inventory covers the ${owed} to pack.`
+            : `${inStock} free tag${inStock === 1 ? '' : 's'} in inventory.`}
+      </p>
+    </div>
+  );
+}

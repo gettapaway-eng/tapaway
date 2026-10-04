@@ -25,6 +25,7 @@ type Status = "idle" | "submitting" | "success" | "error";
 
 const ERROR_MESSAGES: Record<string, string> = {
   rate_limited: "Too many attempts — please try again in a few minutes.",
+  unavailable: "We couldn't add you just now. Please try again in a moment.",
   invalid_input: "That doesn't look like a valid email address.",
   disposable_email:
     "Please use a permanent email address so we can reach you at launch.",

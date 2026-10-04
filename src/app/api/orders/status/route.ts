@@ -2,10 +2,17 @@ import { NextResponse } from 'next/server';
 import { getClientIp, makeRateLimit } from '@/server/guards';
 import { applyPayment, dodo, type PaymentStatus } from '@/server/payments';
 import { supabaseAdmin } from '@/server/supabase';
+import { SHIPS_TO, splitInternational } from '@shared/address';
 
-// Polled by /checkout/complete after Dodo redirects back. Answers with the
-// order's payment status and nothing else — no names, no address — so a
-// guessed reference reveals at most "paid or not".
+// Polled by /checkout/complete after Dodo redirects back. To anyone with just
+// a reference it answers the payment status and nothing else, so a guessed
+// reference reveals at most "paid or not".
+//
+// The details for the confirmation (the address label) come back only with
+// the exact Dodo payment_id recorded on that order — which only the person
+// who paid gets, in their redirect from Dodo's checkout. That lets the page
+// show the label on a reload or in another tab, not just straight after
+// checkout.
 //
 // The webhook usually lands first. If it hasn't yet and the return URL
 // carried Dodo's payment_id, ask Dodo directly and apply the answer through
@@ -29,11 +36,14 @@ export async function GET(request: Request) {
   if (!withinLimit) return reply({ ok: false, error: 'rate_limited' }, 429);
 
   const db = supabaseAdmin();
-  if (!db) return reply({ ok: false, error: 'server_error' }, 500);
+  if (!db) {
+    console.error('Order status: SUPABASE_URL or SUPABASE_SECRET_KEY is not configured');
+    return reply({ ok: false, error: 'unavailable' }, 503);
+  }
 
   const { data: order } = await db
     .from('orders')
-    .select('payment_status')
+    .select('id, payment_status')
     .eq('reference', reference)
     .maybeSingle();
   if (!order) return reply({ ok: false, error: 'not_found' }, 404);
@@ -52,5 +62,43 @@ export async function GET(request: Request) {
     }
   }
 
-  return reply({ ok: true, paymentStatus });
+  const receipt = paymentStatus === 'paid' && PAYMENT_ID.test(paymentId) ? await loadReceipt(order.id, paymentId) : null;
+  return reply({ ok: true, paymentStatus, ...(receipt ? { receipt } : {}) });
+}
+
+/** The confirmation's contents, if `paymentId` is the payment recorded on this order. */
+async function loadReceipt(orderId: string, paymentId: string) {
+  const db = supabaseAdmin();
+  if (!db) return null;
+  const { data: row } = await db
+    .from('orders')
+    .select(
+      'reference, payment_id, email, full_name, phone, address_line1, address_line2, city, region, postal_code, country, items, total_tags, subtotal_cents',
+    )
+    .eq('id', orderId)
+    .maybeSingle();
+  if (!row || row.payment_id !== paymentId) return null;
+
+  // Orders store display values (country and region names, E.164 phone);
+  // the label wants the form's shape back.
+  const countryCode = SHIPS_TO.find((country) => country.name === row.country)?.code ?? '';
+  const phone = row.phone ? splitInternational(row.phone, countryCode) : null;
+  return {
+    reference: row.reference,
+    email: row.email,
+    lines: row.items,
+    totalTags: row.total_tags,
+    subtotalCents: row.subtotal_cents,
+    label: {
+      fullName: row.full_name,
+      phoneCountry: phone?.countryCode ?? countryCode,
+      phone: phone?.national ?? '',
+      country: countryCode,
+      addressLine1: row.address_line1,
+      addressLine2: row.address_line2 ?? '',
+      city: row.city,
+      region: row.region ?? '',
+      postalCode: row.postal_code ?? '',
+    },
+  };
 }

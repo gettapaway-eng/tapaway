@@ -1,7 +1,8 @@
 'use client';
 
 import type { ComponentProps, KeyboardEvent, ReactNode } from 'react';
-import { Download, RotateCw, Search } from 'lucide-react';
+import { Copy, Download, RotateCw, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 // Admin building blocks, styled on the semantic tokens so light and dark both
@@ -225,8 +226,20 @@ export function relativeLabel(value: string): string {
   return relative.format(Math.round(seconds / size), unit);
 }
 
+// Admin times are always the viewer's local time on a 12-hour clock
+// ("4 Oct 2026, 8:35 pm"). Spelled out field by field: `timeStyle` with
+// hour12 zero-pads the hour in some locales.
+const ABSOLUTE = new Intl.DateTimeFormat(undefined, {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
 export function absoluteLabel(value: string): string {
-  return new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  return ABSOLUTE.format(new Date(value));
 }
 
 /** "3 days ago", with the exact time on hover. */
@@ -236,5 +249,28 @@ export function RelativeTime({ value }: { value: string | null }) {
     <time dateTime={value} title={absoluteLabel(value)}>
       {relativeLabel(value)}
     </time>
+  );
+}
+
+function copy(text: string, what: string) {
+  navigator.clipboard.writeText(text).then(
+    () => toast.success(`${what} copied`),
+    () => toast.error(`Couldn't copy ${what.toLowerCase()}`),
+  );
+}
+
+export function CopyButton({ text, what }: { text: string; what: string }) {
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        copy(text, what);
+      }}
+      className="press -mr-1 grid size-6 place-items-center rounded-md text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-[var(--tint)]"
+      aria-label={`Copy ${what.toLowerCase()}`}
+    >
+      <Copy className="size-3.5" />
+    </button>
   );
 }

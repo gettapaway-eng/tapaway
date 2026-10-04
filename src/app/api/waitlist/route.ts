@@ -7,6 +7,7 @@ import {
   makeRateLimit,
   preflight,
   readJson,
+  unavailable,
 } from '@/server/guards';
 import { supabaseAdmin } from '@/server/supabase';
 
@@ -137,11 +138,11 @@ export async function POST(request: Request) {
   try {
     const upserted = await upsertAutosendContact(email);
     if (!upserted) {
-      return json({ ok: false, error: 'upstream_error' }, 502);
+      return unavailable();
     }
   } catch (err) {
     console.error('AutoSend request error', err);
-    return json({ ok: false, error: 'upstream_error' }, 502);
+    return unavailable();
   }
 
   await mirrorToSupabase(email);
