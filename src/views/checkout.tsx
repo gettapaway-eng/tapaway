@@ -57,6 +57,7 @@ const ERROR_COPY: Record<string, string> = {
   invalid_cart: 'Your cart changed since this page loaded. Check your packs and try again.',
   rate_limited: 'Too many pre-orders from this connection in the last hour. Try again a little later.',
   timeout: 'That took too long to go through. Check your connection and try again — you won’t be charged twice.',
+  payment_unavailable: 'Payment is unavailable right now, so nothing was reserved or charged. Try again in a moment.',
 };
 const FALLBACK_ERROR = 'Your pre-order didn’t go through. Check your connection and try again.';
 const DISPOSABLE_COPY = 'That looks like a temporary address. Use one you’ll still have when your tags ship.';
@@ -225,7 +226,7 @@ function stepFromUrl(): Step {
 // Page
 // ---------------------------------------------------------------------------
 
-interface Placed {
+export interface Placed {
   reference: string;
   email: string;
   lines: PricedLine[];
@@ -234,19 +235,49 @@ interface Placed {
   label: LabelValues;
 }
 
+// What the customer reserved, kept for the trip to Dodo's checkout and back,
+// so the return page can show the stamped label. sessionStorage: same tab
+// only, gone when it closes.
+const PENDING_KEY = 'tapaway.checkout.pending.v1';
+
+function savePending(placed: Placed) {
+  try {
+    sessionStorage.setItem(PENDING_KEY, JSON.stringify(placed));
+  } catch {
+    // Without storage the return page shows a plainer confirmation.
+  }
+}
+
+export function loadPending(reference: string): Placed | null {
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(PENDING_KEY) ?? 'null') as Placed | null;
+    return parsed?.reference === reference && parsed.label && Array.isArray(parsed.lines) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Once the deposit is paid: forget the cart, the draft and the snapshot. */
+export function clearAfterPayment() {
+  clearDraft();
+  try {
+    sessionStorage.removeItem(PENDING_KEY);
+  } catch {
+    // Nothing to clear.
+  }
+}
+
 export default function Checkout() {
   const { priced, ready } = useCart();
-  const [placed, setPlaced] = useState<Placed | null>(null);
 
-  if (placed) return <Confirmation placed={placed} />;
   // The saved cart loads after mount; don't flash "empty" before it has.
   if (!ready) return <div className="min-h-svh bg-white" />;
   if (priced.lines.length === 0) return <EmptyCart />;
-  return <CheckoutForm onPlaced={setPlaced} />;
+  return <CheckoutForm />;
 }
 
-function CheckoutForm({ onPlaced }: { onPlaced: (placed: Placed) => void }) {
-  const { lines, priced, clear } = useCart();
+function CheckoutForm() {
+  const { lines, priced } = useCart();
   const draft = useMemo(loadDraft, []);
   // Until someone picks a dial code themselves, it follows the shipping country.
   const dialPicked = useRef(draft?.dialPicked ?? false);
@@ -347,14 +378,21 @@ function CheckoutForm({ onPlaced }: { onPlaced: (placed: Placed) => void }) {
   // reload inside the debounce loses nothing.
   const latest = useRef(values);
   latest.current = values;
-  const placedRef = useRef(false);
+  const [redirecting, setRedirecting] = useState(false);
+  // Back from Dodo's checkout, the browser may restore this page from its
+  // back/forward cache mid-"redirecting"; unlock the form when it does.
+  useEffect(() => {
+    const onShow = (event: PageTransitionEvent) => event.persisted && setRedirecting(false);
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, []);
   const pendingFocus = useRef<OrderField | null>(null);
   useEffect(() => {
     const timer = window.setTimeout(() => saveDraft(values, dialPicked.current), 300);
     return () => window.clearTimeout(timer);
   }, [values]);
   useEffect(() => {
-    const flush = () => !placedRef.current && saveDraft(latest.current, dialPicked.current);
+    const flush = () => saveDraft(latest.current, dialPicked.current);
     window.addEventListener('pagehide', flush);
     return () => window.removeEventListener('pagehide', flush);
   }, []);
@@ -446,13 +484,14 @@ function CheckoutForm({ onPlaced }: { onPlaced: (placed: Placed) => void }) {
         body: JSON.stringify({ fields, items: lines, company: honeypot.current?.value || undefined }),
       });
       const body = (await response.json().catch(() => null)) as
-        | { ok: true; reference: string }
+        | { ok: true; reference: string; checkoutUrl: string }
         | { ok: false; error: string; fields?: Partial<Record<OrderField, string>> }
         | null;
 
       if (response.ok && body?.ok) {
-        placedRef.current = true;
-        onPlaced({
+        // Off to Dodo's hosted checkout. The cart and draft stay until the
+        // return page confirms payment, so backing out loses nothing.
+        savePending({
           reference: body.reference,
           email: fields.email,
           lines: priced.lines,
@@ -460,10 +499,8 @@ function CheckoutForm({ onPlaced }: { onPlaced: (placed: Placed) => void }) {
           subtotalCents: priced.subtotalCents,
           label: fields,
         });
-        clear();
-        clearDraft();
-        window.history.replaceState(null, '', window.location.pathname);
-        window.scrollTo({ top: 0 });
+        setRedirecting(true);
+        window.location.assign(body.checkoutUrl);
         return;
       }
 
@@ -561,7 +598,7 @@ function CheckoutForm({ onPlaced }: { onPlaced: (placed: Placed) => void }) {
           {step !== 'review' ? <MobileSummary /> : null}
 
           {/* Disabled while sending: nothing can change under an in-flight order. */}
-          <fieldset disabled={isSubmitting} className="contents">
+          <fieldset disabled={isSubmitting || redirecting} className="contents">
             <div key={step} data-dir={direction} className="shop-step mt-7 space-y-4">
               {step === 'contact' ? (
                 <>
@@ -835,7 +872,10 @@ function CheckoutForm({ onPlaced }: { onPlaced: (placed: Placed) => void }) {
               </button>
             ) : null}
             {step === 'review' ? (
-              <SubmitButton submitting={isSubmitting} label={`Pay ${formatPrice(DEPOSIT_CENTS)} deposit`} />
+              <SubmitButton
+                submitting={isSubmitting || redirecting}
+                label={`Pay ${formatPrice(DEPOSIT_CENTS)} deposit`}
+              />
             ) : (
               <button
                 type="submit"
@@ -993,7 +1033,7 @@ function SubmitButton({ submitting, label }: { submitting: boolean; label: strin
         )}
         aria-hidden={!submitting}
       >
-        <Spinner /> Processing…
+        <Spinner /> Opening secure checkout…
       </span>
     </button>
   );
@@ -1189,7 +1229,7 @@ function EmptyCart() {
   );
 }
 
-function Confirmation({ placed }: { placed: Placed }) {
+export function Confirmation({ placed }: { placed: Placed }) {
   const [copied, setCopied] = useState(false);
   const copiedTimer = useRef<number | null>(null);
   useEffect(() => () => void (copiedTimer.current && window.clearTimeout(copiedTimer.current)), []);

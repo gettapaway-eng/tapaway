@@ -28,7 +28,9 @@ export function OverviewPage() {
 
   const lastWeek = signups.filter((row) => Date.now() - new Date(row.created_at).getTime() < 7 * DAY).length;
   const registered = tags.filter((row) => tagStatus(row) === 'registered').length;
-  const reservedTags = preorders.filter((row) => row.status !== 'cancelled').reduce((sum, row) => sum + row.total_tags, 0);
+  // A reservation counts once its deposit is paid; abandoned checkouts don't.
+  const paidPreorders = preorders.filter((row) => row.payment_status === 'paid' && row.status !== 'cancelled');
+  const reservedTags = paidPreorders.reduce((sum, row) => sum + row.total_tags, 0);
 
   // Cumulative signups per day, from the first signup to today.
   const growth = useMemo(() => {
@@ -119,7 +121,7 @@ export function OverviewPage() {
         <Stat
           label="Tags reserved"
           value={reservedTags}
-          caption={`${preorders.length} pre-order${preorders.length === 1 ? '' : 's'}`}
+          caption={`${paidPreorders.length} paid pre-order${paidPreorders.length === 1 ? '' : 's'}`}
           onClick={() => go('orders')}
           loading={loading}
         />
