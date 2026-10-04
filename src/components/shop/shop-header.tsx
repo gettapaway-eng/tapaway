@@ -1,20 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ShoppingBag } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { Logomark } from '@/components/site/logo';
 import { useCart } from '@/lib/cart';
 
 export function ShopHeader() {
-  const { itemCount } = useCart();
-  // Pulse the count when it goes up — not on first paint, not when it drops.
-  const previous = useRef(itemCount);
-  const [bump, setBump] = useState(0);
-  useEffect(() => {
-    if (itemCount > previous.current) setBump((value) => value + 1);
-    previous.current = itemCount;
-  }, [itemCount]);
+  const { priced } = useCart();
+  const pathname = usePathname();
+  // A way back to an unfinished pre-order from anywhere in the shop — not
+  // needed on the pre-order pages themselves, or when nothing is chosen.
+  const showResume = priced.totalTags > 0 && !pathname.startsWith('/checkout');
 
   return (
     <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
@@ -23,22 +19,17 @@ export function ShopHeader() {
         <Logomark className="h-6 w-auto [&_path]:fill-zinc-900" />
         <span className="text-lg font-semibold tracking-tight">tapaway</span>
       </Link>
-      <Link
-        href="/checkout"
-        className="press focus-ring inline-flex h-10 items-center gap-2 rounded-full border border-zinc-200 pl-3.5 pr-3 text-sm font-medium hover:bg-zinc-50"
-        aria-label={itemCount > 0 ? `Cart, ${itemCount} item${itemCount === 1 ? '' : 's'}` : 'Cart, empty'}
-      >
-        <ShoppingBag className="size-4" strokeWidth={1.75} />
-        Cart
-        <span
-          key={bump}
-          className="tabular grid h-5 min-w-5 place-items-center rounded-full bg-[var(--ink)] px-1.5 text-[11px] font-semibold text-white transition-opacity duration-150 data-[empty=true]:bg-zinc-100 data-[empty=true]:text-zinc-500 data-[bump=true]:cart-bump"
-          data-empty={itemCount === 0}
-          data-bump={bump > 0}
+      {showResume ? (
+        <Link
+          href="/checkout"
+          className="press focus-ring inline-flex h-10 items-center gap-2 rounded-full border border-zinc-200 px-4 text-sm font-medium hover:bg-zinc-50"
         >
-          {itemCount}
-        </span>
-      </Link>
+          Continue pre-order
+          <span className="tabular text-zinc-500">
+            · {priced.totalTags} tag{priced.totalTags === 1 ? '' : 's'}
+          </span>
+        </Link>
+      ) : null}
     </header>
   );
 }

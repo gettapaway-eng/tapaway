@@ -170,11 +170,11 @@ function Barcode({ seed, muted }: { seed: string; muted: boolean }) {
 function Stamp() {
   return (
     <div
-      className="label-stamp pointer-events-none absolute -bottom-3 right-24 grid size-[84px] place-items-center rounded-full bg-white/80 border-[2.5px] border-[var(--leaf)] text-center text-[var(--leaf)]"
+      className="label-stamp pointer-events-none absolute -bottom-3 right-24 grid size-[92px] place-items-center rounded-full bg-white/80 border-[2.5px] border-[var(--leaf)] text-center text-[var(--leaf)]"
       aria-hidden="true"
     >
-      <span className="text-[13px] font-extrabold leading-tight tracking-[0.02em]">
-        Reserved
+      <span className="whitespace-nowrap text-[11px] font-extrabold leading-tight tracking-[0.01em]">
+        Pre-ordered
         <span className="block text-[10px] font-semibold opacity-80">tapaway</span>
       </span>
     </div>

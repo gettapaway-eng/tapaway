@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { CheckoutClient } from './checkout-client';
 
 export const metadata: Metadata = {
-  title: 'Checkout — tapaway',
+  title: 'Pre-order — tapaway',
   robots: { index: false, follow: false },
 };
 

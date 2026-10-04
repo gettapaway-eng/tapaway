@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { CompleteClient } from './complete-client';
 
 export const metadata: Metadata = {
-  title: 'Confirming your deposit — tapaway',
+  title: 'Confirming your pre-order — tapaway',
   robots: { index: false, follow: false },
 };
 

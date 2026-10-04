@@ -317,21 +317,6 @@
   animation: shop-fade-in 180ms ease-out;
 }
 
-/* Cart count: one small pulse when something lands in it. */
-.cart-bump {
-  animation: cart-bump 220ms var(--ease-out-strong);
-}
-@keyframes cart-bump {
-  40% {
-    transform: scale(1.18);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .cart-bump {
-    animation: none;
-  }
-}
-
 /* Staggered entrance for the confirmation screen: once per order, so it can
    afford a moment of ceremony. */
 .shop-rise {
@@ -528,4 +513,29 @@ body.admin-root.theme-switching *::after {
   .admin-root [data-sonner-toast][data-styled='true'] {
     backdrop-filter: none;
   }
+}
+
+/* Admin scroll areas: a thin thumb that follows the theme, on a transparent
+   track — no light gutter beside dark content. Native controls and scrollbars
+   elsewhere in the admin follow the theme too. */
+.admin-root {
+  color-scheme: light;
+}
+.admin-root.dark {
+  color-scheme: dark;
+}
+.admin-root .admin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--foreground) 24%, transparent) transparent;
+}
+/* Safari, which doesn't support scrollbar-width / scrollbar-color yet. */
+.admin-root .admin-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.admin-root .admin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-root .admin-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--foreground) 24%, transparent);
 }

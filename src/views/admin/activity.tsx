@@ -1,7 +1,21 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronRight, Mail, Nfc, RotateCcw, ShieldCheck, ShieldOff, Trash2, type LucideIcon } from 'lucide-react';
+import {
+  Check,
+  ChevronRight,
+  Mail,
+  Nfc,
+  PackageCheck,
+  Pencil,
+  RotateCcw,
+  ShieldCheck,
+  ShieldOff,
+  Trash2,
+  Truck,
+  XCircle,
+  type LucideIcon,
+} from 'lucide-react';
 import { DiscreteTabs } from '@/components/registry/discrete-tabs';
 import { cn } from '@/lib/utils';
 import { useAudit, type AuditRow } from './data';
@@ -12,7 +26,7 @@ import { absoluteLabel, PageHeader, relativeLabel, SearchField, ToolButton, Tool
 // only useful if nobody can quietly edit it, so there's no RLS policy that
 // would let a client change a row.
 
-type Kind = 'all' | 'waitlist' | 'tags' | 'permissions';
+type Kind = 'all' | 'orders' | 'waitlist' | 'tags' | 'permissions';
 
 const ACTIONS: Record<string, { verb: string; icon: LucideIcon; tone: string; kind: Exclude<Kind, 'all'> }> = {
   'waitlist.removed': { verb: 'deleted', icon: Trash2, tone: 'text-red-500', kind: 'waitlist' },
@@ -21,6 +35,11 @@ const ACTIONS: Record<string, { verb: string; icon: LucideIcon; tone: string; ki
   'tag.released': { verb: 'released tag', icon: Nfc, tone: 'text-amber-500', kind: 'tags' },
   'provisioner.added': { verb: 'made a provisioner:', icon: ShieldCheck, tone: 'text-emerald-500', kind: 'permissions' },
   'provisioner.removed': { verb: 'removed provisioner:', icon: ShieldOff, tone: 'text-muted-foreground', kind: 'permissions' },
+  'order.confirmed': { verb: 'confirmed pre-order', icon: Check, tone: 'text-[var(--tint)]', kind: 'orders' },
+  'order.shipped': { verb: 'shipped pre-order', icon: Truck, tone: 'text-[var(--tint)]', kind: 'orders' },
+  'order.tracking_updated': { verb: 'updated tracking for', icon: Pencil, tone: 'text-muted-foreground', kind: 'orders' },
+  'order.delivered': { verb: 'marked delivered:', icon: PackageCheck, tone: 'text-emerald-500', kind: 'orders' },
+  'order.cancelled': { verb: 'cancelled pre-order', icon: XCircle, tone: 'text-red-500', kind: 'orders' },
 };
 const FALLBACK = { verb: '', icon: Mail, tone: 'text-muted-foreground', kind: 'waitlist' as const };
 
@@ -47,7 +66,7 @@ export function ActivityPage() {
   const rows = audit.data ?? [];
 
   const counts = useMemo(() => {
-    const result = { waitlist: 0, tags: 0, permissions: 0 };
+    const result = { orders: 0, waitlist: 0, tags: 0, permissions: 0 };
     for (const row of rows) result[(ACTIONS[row.action] ?? FALLBACK).kind] += 1;
     return result;
   }, [rows]);
@@ -88,6 +107,7 @@ export function ActivityPage() {
           onChange={setKind}
           options={[
             { value: 'all', label: 'All', count: rows.length },
+            { value: 'orders', label: 'Pre-orders', count: counts.orders },
             { value: 'waitlist', label: 'Waitlist', count: counts.waitlist },
             { value: 'tags', label: 'Tags', count: counts.tags },
             { value: 'permissions', label: 'Permissions', count: counts.permissions },

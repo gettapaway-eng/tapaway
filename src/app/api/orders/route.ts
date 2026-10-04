@@ -9,10 +9,12 @@ import {
   json,
   preflight,
   readJson,
+  unavailable,
 } from '@/server/guards';
 import { supabaseAdmin } from '@/server/supabase';
 import { CURRENCY, DEPOSIT_CENTS, MAX_QUANTITY_PER_PACK, PACKS, priceCart, type PackId } from '@shared/packs';
 import { depositProductId, dodo } from '@/server/payments';
+import { isProduction } from '@/lib/env';
 import { fieldErrors, orderFieldsSchema, toOrderContact } from '@shared/order';
 
 // Pre-orders, held by a deposit (DEPOSIT_CENTS in shared/packs.ts) paid on
@@ -21,7 +23,11 @@ import { fieldErrors, orderFieldsSchema, toOrderContact } from '@shared/order';
 // into the row, so neither a tampered request nor a later price change can
 // alter what was ordered.
 
-const ratelimit = makeRateLimit('orders', 5, '1 h'); // 5 orders / hour / IP
+// Every attempt writes an order row and opens a Dodo checkout session before
+// any card is involved, so scripts get capped — but loosely enough that
+// people sharing one IP (offices, campuses, mobile carriers) never notice.
+// Non-production is looser still, so testing never trips it.
+const ratelimit = makeRateLimit('orders', isProduction ? 20 : 100, '10 m');
 
 const packIds = PACKS.map((pack) => pack.id) as [PackId, ...PackId[]];
 
@@ -96,7 +102,7 @@ export async function POST(request: Request) {
   const db = supabaseAdmin();
   if (!db) {
     console.error('SUPABASE_URL or SUPABASE_SECRET_KEY is not configured');
-    return json({ ok: false, error: 'server_error' }, 500);
+    return unavailable();
   }
 
   // A reference collision is astronomically unlikely (30^6 ≈ 729M), but the
@@ -130,10 +136,13 @@ export async function POST(request: Request) {
     if (data) order = data;
     else if (error?.code !== '23505') {
       console.error('Order insert failed', error?.message);
-      return json({ ok: false, error: 'upstream_error' }, 502);
+      return unavailable();
     }
   }
-  if (!order) return json({ ok: false, error: 'upstream_error' }, 502);
+  if (!order) {
+    console.error('Order insert failed: reference collided three times');
+    return unavailable();
+  }
 
   // The deposit is paid on Dodo's hosted checkout, prefilled with what was
   // just validated. The order reference rides along in metadata: it's how the
@@ -169,6 +178,6 @@ export async function POST(request: Request) {
     // unpaid order nobody can complete. Trying again creates a fresh one.
     console.error('Dodo checkout session failed', err);
     await db.from('orders').delete().eq('id', order.id);
-    return json({ ok: false, error: 'payment_unavailable' }, 502);
+    return unavailable();
   }
 }

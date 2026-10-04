@@ -117,6 +117,16 @@ export function preflight(): NextResponse {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
+/**
+ * The one answer a public endpoint gives when the failure is on our side —
+ * database, AutoSend, Dodo, missing config, whatever it was. The specific
+ * cause goes to the server log; the response never names the system that
+ * broke, so the API doesn't map out the backend for anyone watching it.
+ */
+export function unavailable(): NextResponse {
+  return json({ ok: false, error: 'unavailable' }, 503);
+}
+
 /** Parses a JSON body, or returns undefined for a missing or malformed one. */
 export async function readJson(request: Request): Promise<unknown> {
   try {

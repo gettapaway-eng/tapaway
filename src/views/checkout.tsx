@@ -54,12 +54,13 @@ import { LIMITS, orderFieldsSchema, type OrderField, type OrderFields, type Orde
 
 const ERROR_COPY: Record<string, string> = {
   invalid_input: 'A few details need another look.',
-  invalid_cart: 'Your cart changed since this page loaded. Check your packs and try again.',
-  rate_limited: 'Too many pre-orders from this connection in the last hour. Try again a little later.',
+  invalid_cart: 'Your selection changed since this page loaded. Go back to the tags, choose again, and retry.',
+  rate_limited: 'Too many attempts from this connection. Wait a few minutes and try again.',
   timeout: 'That took too long to go through. Check your connection and try again — you won’t be charged twice.',
-  payment_unavailable: 'Payment is unavailable right now, so nothing was reserved or charged. Try again in a moment.',
+  // Anything that failed on our side. The server says no more than that.
+  unavailable: 'We couldn’t save your pre-order just now. Nothing was charged — try again in a moment.',
 };
-const FALLBACK_ERROR = 'Your pre-order didn’t go through. Check your connection and try again.';
+const FALLBACK_ERROR = 'Your pre-order didn’t go through, and nothing was charged. Check your connection and try again.';
 const DISPOSABLE_COPY = 'That looks like a temporary address. Use one you’ll still have when your tags ship.';
 
 const SUBMIT_TIMEOUT_MS = 20_000;
@@ -211,7 +212,7 @@ const STEPS: { id: Step; label: string; title: string; fields: OrderField[] }[] 
     title: 'Delivery address',
     fields: ['country', 'addressLine1', 'addressLine2', 'city', 'region', 'postalCode'],
   },
-  { id: 'review', label: 'Review', title: 'Review your order', fields: [] },
+  { id: 'review', label: 'Review', title: 'Review your pre-order', fields: [] },
 ];
 
 const stepIndex = (step: Step) => STEPS.findIndex((entry) => entry.id === step);
@@ -257,7 +258,7 @@ export function loadPending(reference: string): Placed | null {
   }
 }
 
-/** Once the deposit is paid: forget the cart, the draft and the snapshot. */
+/** Once the pre-order is paid: forget the selection, the draft and the snapshot. */
 export function clearAfterPayment() {
   clearDraft();
   try {
@@ -572,7 +573,7 @@ function CheckoutForm() {
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
                   <Link href="/shop" className="focus-ring rounded-sm hover:text-zinc-900">
-                    Cart
+                    Tags
                   </Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
@@ -828,7 +829,7 @@ function CheckoutForm() {
                     <TextButton onClick={() => goTo('shipping')}>Edit address</TextButton>
                   </div>
                   <div className="pt-2">
-                    <h2 className="text-[15px] font-semibold text-[var(--ink)]">Your order</h2>
+                    <h2 className="text-[15px] font-semibold text-[var(--ink)]">Your pre-order</h2>
                     <OrderSummary />
                   </div>
                 </>
@@ -874,7 +875,7 @@ function CheckoutForm() {
             {step === 'review' ? (
               <SubmitButton
                 submitting={isSubmitting || redirecting}
-                label={`Pay ${formatPrice(DEPOSIT_CENTS)} deposit`}
+                label={`Pre-order · Pay ${formatPrice(DEPOSIT_CENTS)}`}
               />
             ) : (
               <button
@@ -887,7 +888,10 @@ function CheckoutForm() {
           </div>
           {step === 'review' ? (
             <p className="mt-3 text-center text-[13px] text-zinc-500">
-              Paid securely with Dodo Payments. The rest is due when we ship.
+              You’ll pay {formatPrice(DEPOSIT_CENTS)} securely with Dodo Payments.{' '}
+              {balanceCents(priced.subtotalCents) > 0
+                ? `The remaining ${formatPrice(balanceCents(priced.subtotalCents))} is due when we ship.`
+                : null}
             </p>
           ) : null}
         </form>
@@ -1033,7 +1037,7 @@ function SubmitButton({ submitting, label }: { submitting: boolean; label: strin
         )}
         aria-hidden={!submitting}
       >
-        <Spinner /> Opening secure checkout…
+        <Spinner /> Opening secure payment…
       </span>
     </button>
   );
@@ -1066,7 +1070,7 @@ function ObjectPanel({ values }: { values: OrderFieldsInput }) {
       <div className="flex items-end justify-between gap-4 pt-6 text-[var(--ink)]">
         <div>
           <p className="text-[15px] font-semibold">{summaryLine(priced.lines)}</p>
-          <p className="mt-0.5 text-[13px] text-[var(--ink)]/70">{formatPrice(DEPOSIT_CENTS)} deposit today</p>
+          <p className="mt-0.5 text-[13px] text-[var(--ink)]/70">Pay {formatPrice(DEPOSIT_CENTS)} today</p>
         </div>
         <p className="text-right">
           <span className="tabular block text-[1.625rem] leading-none font-semibold tracking-[-0.02em]">
@@ -1134,15 +1138,15 @@ function OrderSummary() {
 
       <dl className="tabular mt-3 space-y-1.5 text-[14px]">
         <div className="flex justify-between text-zinc-500">
-          <dt>Due when we ship</dt>
-          <dd>{formatPrice(balanceCents(priced.subtotalCents))}</dd>
-        </div>
-        <div className="flex justify-between text-zinc-500">
           <dt>Total</dt>
           <dd>{formatPrice(priced.subtotalCents)}</dd>
         </div>
+        <div className="flex justify-between text-zinc-500">
+          <dt>Due when we ship</dt>
+          <dd>{formatPrice(balanceCents(priced.subtotalCents))}</dd>
+        </div>
         <div className="flex justify-between pt-1 text-[16px] font-semibold text-[var(--ink)]">
-          <dt>Deposit due today</dt>
+          <dt>Pay today</dt>
           <dd>{formatPrice(DEPOSIT_CENTS)}</dd>
         </div>
       </dl>
@@ -1216,8 +1220,8 @@ function EmptyCart() {
     <Shell>
       <main className="mx-auto max-w-md px-5 pt-16 text-center sm:pt-24">
         <img src={`/tag/tag-thumb.webp`} alt="" className="mx-auto size-20 opacity-60" />
-        <h1 className="mt-5 text-[2rem] font-semibold tracking-[-0.03em] text-[var(--ink)]">Your cart is empty</h1>
-        <p className="mt-2 text-[15px] text-zinc-600">Choose a pack of tags to reserve.</p>
+        <h1 className="mt-5 text-[2rem] font-semibold tracking-[-0.03em] text-[var(--ink)]">No tags chosen yet</h1>
+        <p className="mt-2 text-[15px] text-zinc-600">Choose how many tags you’d like to pre-order.</p>
         <Link
           href="/shop"
           className="press focus-ring mt-7 inline-flex h-12 items-center rounded-full bg-[var(--ink)] px-7 text-[15px] font-semibold text-white hover:bg-[#3a3d42]"
@@ -1251,12 +1255,14 @@ export function Confirmation({ placed }: { placed: Placed }) {
     <Shell>
       <main className="mx-auto max-w-[27rem] px-4 pb-24 pt-6 sm:pt-12">
         <h1 className="shop-rise text-[2.25rem] leading-[1.05] font-semibold tracking-[-0.03em] text-[var(--ink)]">
-          Your tags are reserved
+          Your pre-order is confirmed
         </h1>
         <p className="shop-rise mt-3 text-[15px] leading-relaxed text-pretty text-zinc-600" style={rise(1)}>
-          Your {formatPrice(DEPOSIT_CENTS)} deposit is paid. We’ll email{' '}
-          <span className="font-medium text-[var(--ink)]">{placed.email}</span> before anything ships, when the
-          remaining {formatPrice(balanceCents(placed.subtotalCents))} is due.
+          You paid {formatPrice(DEPOSIT_CENTS)} today. We’ll email{' '}
+          <span className="font-medium text-[var(--ink)]">{placed.email}</span> before anything ships
+          {balanceCents(placed.subtotalCents) > 0
+            ? `, when the remaining ${formatPrice(balanceCents(placed.subtotalCents))} is due.`
+            : '.'}
         </p>
 
         <div className="shop-rise mt-7 rounded-[28px] bg-[var(--sky)] p-4 sm:p-5" style={rise(2)}>
