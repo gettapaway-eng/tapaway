@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import { Providers } from './providers';
+import { isProduction } from '@/lib/env';
 import './globals.css';
 
 // Self-hosted by next/font: no request to Google at runtime, no layout shift.
@@ -28,7 +29,8 @@ export const metadata: Metadata = {
     'phone addiction',
   ],
   authors: [{ name: 'TapAway' }],
-  robots: { index: true, follow: true },
+  // Only production is indexable; dev.tapaway.today and previews stay out.
+  robots: isProduction ? { index: true, follow: true } : { index: false, follow: false },
   alternates: { canonical: '/' },
   openGraph: {
     type: 'website',
