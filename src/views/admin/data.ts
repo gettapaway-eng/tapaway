@@ -62,6 +62,11 @@ export interface OrderRow {
   total_tags: number;
   subtotal_cents: number;
   currency: string;
+  /** The deposit taken on Dodo's checkout; older rows predate deposits. */
+  payment_status: 'unpaid' | 'paid' | 'failed' | 'refunded';
+  deposit_cents: number;
+  payment_id: string | null;
+  paid_at: string | null;
   created_at: string;
 }
 

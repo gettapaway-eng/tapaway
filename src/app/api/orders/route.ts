@@ -1,4 +1,5 @@
 import { randomInt } from 'node:crypto';
+import type { CountryCode } from 'dodopayments/resources/misc';
 import { z } from 'zod';
 import {
   getClientIp,
@@ -10,12 +11,13 @@ import {
   readJson,
 } from '@/server/guards';
 import { supabaseAdmin } from '@/server/supabase';
-import { CURRENCY, MAX_QUANTITY_PER_PACK, PACKS, priceCart, type PackId } from '@shared/packs';
+import { CURRENCY, DEPOSIT_CENTS, MAX_QUANTITY_PER_PACK, PACKS, priceCart, type PackId } from '@shared/packs';
+import { depositProductId, dodo } from '@/server/payments';
 import { fieldErrors, orderFieldsSchema, toOrderContact } from '@shared/order';
 
-// Pre-orders, held by a deposit (DEPOSIT_CENTS in shared/packs.ts) taken
-// with Dodo Payments — not wired in here yet. The order is a reservation with
-// shipping details; totals are recomputed here from shared/packs.ts and snapshotted
+// Pre-orders, held by a deposit (DEPOSIT_CENTS in shared/packs.ts) paid on
+// Dodo Payments' hosted checkout. The order is a reservation with shipping
+// details; totals are recomputed here from shared/packs.ts and snapshotted
 // into the row, so neither a tampered request nor a later price change can
 // alter what was ordered.
 
@@ -75,7 +77,8 @@ export async function POST(request: Request) {
 
   if (isHoneypotTripped(company)) {
     // Same shape as a real success, with a reference that matches no order.
-    return json({ ok: true, reference: newReference() });
+    const reference = newReference();
+    return json({ ok: true, reference, checkoutUrl: `/checkout/complete?ref=${reference}` });
   }
 
   if (isDisposable(customer.email)) {
@@ -98,33 +101,74 @@ export async function POST(request: Request) {
 
   // A reference collision is astronomically unlikely (30^6 ≈ 729M), but the
   // column is unique, so retry rather than fail if it ever happens.
-  for (let attempt = 0; attempt < 3; attempt++) {
+  let order: { id: string; reference: string } | null = null;
+  for (let attempt = 0; attempt < 3 && !order; attempt++) {
     const reference = newReference();
-    const { error } = await db.from('orders').insert({
-      reference,
-      email: customer.email,
-      full_name: customer.fullName,
-      phone: customer.phone,
-      address_line1: customer.addressLine1,
-      address_line2: customer.addressLine2,
-      city: customer.city,
-      region: customer.region,
-      postal_code: customer.postalCode,
-      country: customer.country,
-      notes: customer.notes,
-      items: cart.lines,
-      total_tags: cart.totalTags,
-      subtotal_cents: cart.subtotalCents,
-      currency: CURRENCY,
-    });
-    if (!error) {
-      return json({ ok: true, reference });
-    }
-    if (error.code !== '23505') {
-      console.error('Order insert failed', error.message);
+    const { data, error } = await db
+      .from('orders')
+      .insert({
+        reference,
+        email: customer.email,
+        full_name: customer.fullName,
+        phone: customer.phone,
+        address_line1: customer.addressLine1,
+        address_line2: customer.addressLine2,
+        city: customer.city,
+        region: customer.region,
+        postal_code: customer.postalCode,
+        country: customer.country,
+        notes: customer.notes,
+        items: cart.lines,
+        total_tags: cart.totalTags,
+        subtotal_cents: cart.subtotalCents,
+        currency: CURRENCY,
+        payment_status: 'unpaid',
+        deposit_cents: DEPOSIT_CENTS,
+      })
+      .select('id, reference')
+      .single();
+    if (data) order = data;
+    else if (error?.code !== '23505') {
+      console.error('Order insert failed', error?.message);
       return json({ ok: false, error: 'upstream_error' }, 502);
     }
   }
+  if (!order) return json({ ok: false, error: 'upstream_error' }, 502);
 
-  return json({ ok: false, error: 'upstream_error' }, 502);
+  // The deposit is paid on Dodo's hosted checkout, prefilled with what was
+  // just validated. The order reference rides along in metadata: it's how the
+  // webhook and the return page find this order again.
+  const origin = new URL(request.url).origin;
+  const contact = fields.data;
+  try {
+    const session = await dodo().checkoutSessions.create({
+      product_cart: [{ product_id: depositProductId(), quantity: 1 }],
+      customer: { email: customer.email, name: customer.fullName, phone_number: customer.phone },
+      // Dodo's country list has no Kosovo; let its checkout ask instead.
+      billing_address:
+        contact.country === 'XK'
+          ? null
+          : {
+              country: contact.country as CountryCode,
+              street: [customer.addressLine1, customer.addressLine2].filter(Boolean).join(', '),
+              city: customer.city,
+              state: customer.region,
+              zipcode: customer.postalCode || null,
+            },
+      metadata: { order_reference: order.reference, order_id: order.id },
+      return_url: `${origin}/checkout/complete?ref=${order.reference}`,
+      cancel_url: `${origin}/checkout?step=review`,
+      customization: { theme: 'light' },
+    });
+    if (!session.checkout_url) throw new Error(`Session ${session.session_id} has no checkout_url`);
+
+    await db.from('orders').update({ checkout_session_id: session.session_id }).eq('id', order.id);
+    return json({ ok: true, reference: order.reference, checkoutUrl: session.checkout_url });
+  } catch (err) {
+    // No way to pay means no reservation: drop the row rather than leave an
+    // unpaid order nobody can complete. Trying again creates a fresh one.
+    console.error('Dodo checkout session failed', err);
+    await db.from('orders').delete().eq('id', order.id);
+    return json({ ok: false, error: 'payment_unavailable' }, 502);
+  }
 }

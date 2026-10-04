@@ -508,6 +508,13 @@ export const ORDER_STATUS: Record<OrderRow['status'], { label: string; tone: Pil
   cancelled: { label: 'Cancelled', tone: 'red' },
 };
 
+export const PAYMENT_STATUS: Record<OrderRow['payment_status'], { label: string; tone: PillTone }> = {
+  paid: { label: 'Deposit paid', tone: 'green' },
+  unpaid: { label: 'Unpaid', tone: 'gray' },
+  failed: { label: 'Payment failed', tone: 'red' },
+  refunded: { label: 'Refunded', tone: 'gray' },
+};
+
 const itemsSummary = (row: OrderRow) => row.items.map((item) => `${item.quantity} × ${item.name}`).join(', ');
 
 export function OrdersPage() {
@@ -520,16 +527,19 @@ export function OrdersPage() {
 
   return (
     <>
-      <PageHeader title="Pre-orders" description="Reservations from the shop. No payment has been taken.">
+      <PageHeader title="Pre-orders" description="Reservations from the shop. A deposit is taken at checkout; the rest when it ships.">
         <ToolButton
           icon="download"
           disabled={visible.length === 0}
           onClick={() => {
             csvDownload('tapaway-preorders.csv', [
-              ['reference', 'status', 'placed', 'name', 'email', 'phone', 'address', 'city', 'region', 'postal code', 'country', 'items', 'tags', 'total', 'notes'],
+              ['reference', 'status', 'payment', 'deposit', 'paid at', 'placed', 'name', 'email', 'phone', 'address', 'city', 'region', 'postal code', 'country', 'items', 'tags', 'total', 'notes'],
               ...visible.map((row) => [
                 row.reference,
                 row.status,
+                row.payment_status,
+                formatPrice(row.deposit_cents, row.currency),
+                row.paid_at ?? '',
                 row.created_at,
                 row.full_name,
                 row.email,
@@ -584,6 +594,7 @@ export function OrdersPage() {
                   <span className="inline-flex items-center gap-2">
                     <span className="tabular font-mono text-[12px] font-semibold">{row.reference}</span>
                     <Pill tone={status.tone}>{status.label}</Pill>
+                    <Pill tone={PAYMENT_STATUS[row.payment_status].tone}>{PAYMENT_STATUS[row.payment_status].label}</Pill>
                   </span>
                 </Cell>
                 <Cell>{row.full_name}</Cell>
@@ -646,9 +657,27 @@ function OrderInspector({ row, onClose }: { row: OrderRow | undefined; onClose: 
                 <span className="tabular text-muted-foreground">{item.quantity * item.tags} tags</span>
               </DetailRow>
             ))}
-            <DetailRow label="Total when shipped">
+            <DetailRow label="Total">
               <span className="tabular font-semibold">{formatPrice(row.subtotal_cents, row.currency)}</span>
             </DetailRow>
+          </DetailGroup>
+
+          <DetailGroup title="Deposit">
+            <DetailRow label="Status">
+              <Pill tone={PAYMENT_STATUS[row.payment_status].tone}>{PAYMENT_STATUS[row.payment_status].label}</Pill>
+            </DetailRow>
+            <DetailRow label="Amount">
+              <span className="tabular">{formatPrice(row.deposit_cents, row.currency)}</span>
+            </DetailRow>
+            {row.paid_at ? <DetailRow label="Paid">{absoluteLabel(row.paid_at)}</DetailRow> : null}
+            {row.payment_id ? (
+              <DetailRow label="Dodo payment">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="tabular truncate font-mono text-[12px]">{row.payment_id}</span>
+                  <CopyButton text={row.payment_id} what="Payment ID" />
+                </span>
+              </DetailRow>
+            ) : null}
           </DetailGroup>
 
           <DetailGroup title="Customer">
