@@ -4,26 +4,39 @@ import type { Payment } from 'dodopayments/resources/payments';
 import { isProduction } from '@/lib/env';
 import { supabaseAdmin } from './supabase';
 
-// Dodo Payments: the $5 pre-order deposit. One client per server instance,
-// created on first use so a missing env var fails a request, not the build.
+// Dodo Payments: the $5 pre-order deposit.
 //
-//   DODO_PAYMENTS_API_KEY       API key for the brand's business (test or live)
-//   DODO_PAYMENTS_WEBHOOK_KEY   signing secret of the webhook endpoint (whsec_…)
-//   DODO_PAYMENTS_ENVIRONMENT   test_mode | live_mode
-//   DODO_DEPOSIT_PRODUCT_ID     the one-time "$5 pre-order deposit" product (pdt_…)
+// The mode follows the deployment: production takes real money (live_mode);
+// dev.tapaway.today, previews and localhost use test_mode. Dev shares the
+// production database, so it must never be able to charge a real card.
+//
+// Only the two secrets come from env vars, set per Vercel environment:
+//   DODO_PAYMENTS_API_KEY       test key in Preview/Development, live key in Production
+//   DODO_PAYMENTS_WEBHOOK_KEY   signing secret of that environment's webhook (whsec_…)
 
-// The Dodo account holds several brands; every webhook for the business comes
-// to us. tapaway's brand per mode — anything else is someone else's payment.
-const BRAND_IDS = {
-  test_mode: 'brnd_0NozgMleyNbhCVFXwmqeD',
-  live_mode: 'brnd_0NozgF5LcouspbpadGszD',
-} as const;
+type DodoMode = 'test_mode' | 'live_mode';
+const mode: DodoMode = isProduction ? 'live_mode' : 'test_mode';
 
-const dodoEnvironment = (): keyof typeof BRAND_IDS =>
-  process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode' ? 'live_mode' : 'test_mode';
+// Public identifiers, not secrets. The Dodo account holds several brands and
+// every webhook for the business comes to us: anything not on tapaway's
+// brand is someone else's payment.
+//
+// The deposit product's price lives in Dodo. Keep it equal to DEPOSIT_CENTS in
+// shared/packs.ts (what the site says it charges) — change both together.
+const DODO_IDS: Record<DodoMode, { brand: string; depositProduct: string }> = {
+  test_mode: { brand: 'brnd_0NozgMleyNbhCVFXwmqeD', depositProduct: 'pdt_0NozkaOIkeVczn2TflHEi' },
+  live_mode: { brand: 'brnd_0NozgF5LcouspbpadGszD', depositProduct: 'pdt_0Nozkj9I1hNaKkkQtnsTl' },
+};
 
-/** tapaway's Dodo brand for the configured mode. */
-export const tapawayBrandId = () => BRAND_IDS[dodoEnvironment()];
+/** tapaway's Dodo brand for this deployment's mode. */
+export const tapawayBrandId = () => DODO_IDS[mode].brand;
+
+/** The one-time "$5 pre-order deposit" product (pdt_…) for this mode. */
+export function depositProductId(): string {
+  const id = DODO_IDS[mode].depositProduct;
+  if (!id) throw new Error(`No Dodo deposit product set for ${mode} in src/server/payments.ts`);
+  return id;
+}
 
 let client: DodoPayments | undefined;
 
@@ -31,24 +44,12 @@ export function dodo(): DodoPayments {
   if (client) return client;
   const bearerToken = process.env.DODO_PAYMENTS_API_KEY;
   if (!bearerToken) throw new Error('DODO_PAYMENTS_API_KEY is not configured');
-  const environment = dodoEnvironment();
-  // dev.tapaway.today shares the production database; it must never also take
-  // real money. Live charges happen on the production deployment only.
-  if (environment === 'live_mode' && !isProduction) {
-    throw new Error('Refusing to use Dodo live_mode outside production');
-  }
   client = new DodoPayments({
     bearerToken,
-    environment,
+    environment: mode,
     webhookKey: process.env.DODO_PAYMENTS_WEBHOOK_KEY ?? null,
   });
   return client;
-}
-
-export function depositProductId(): string {
-  const id = process.env.DODO_DEPOSIT_PRODUCT_ID;
-  if (!id) throw new Error('DODO_DEPOSIT_PRODUCT_ID is not configured');
-  return id;
 }
 
 export type PaymentStatus = 'unpaid' | 'paid' | 'failed' | 'refunded';
