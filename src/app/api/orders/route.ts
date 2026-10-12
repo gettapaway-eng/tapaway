@@ -14,7 +14,7 @@ import {
 import { supabaseAdmin } from '@/server/supabase';
 import { CURRENCY, DEPOSIT_CENTS, MAX_QUANTITY_PER_PACK, PACKS, priceCart, type PackId } from '@shared/packs';
 import { depositProductId, dodo } from '@/server/payments';
-import { isProduction } from '@/lib/env';
+import { isProduction, shopEnabled } from '@/lib/env';
 import { fieldErrors, orderFieldsSchema, toOrderContact } from '@shared/order';
 
 // Pre-orders, held by a deposit (DEPOSIT_CENTS in shared/packs.ts) paid on
@@ -61,6 +61,7 @@ function newReference(): string {
 export const OPTIONS = preflight;
 
 export async function POST(request: Request) {
+  if (!shopEnabled) return json({ ok: false, error: 'not_found' }, 404);
   const { success: withinLimit } = await ratelimit.limit(getClientIp(request));
   if (!withinLimit) {
     return json({ ok: false, error: 'rate_limited' }, 429);

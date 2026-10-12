@@ -27,3 +27,11 @@ export const gitBranch: string | undefined =
 
 /** True on the long-lived `dev` branch (dev.tapaway.today), not other previews. */
 export const isDevBranch = isPreview && gitBranch === 'dev';
+
+/**
+ * Whether the shop takes pre-orders. Off in production until launch: /shop
+ * shows a coming-soon page, checkout redirects there, and the order API
+ * refuses. On everywhere else, so dev.tapaway.today keeps the full flow.
+ * Launching is changing this line.
+ */
+export const shopEnabled = !isProduction;
