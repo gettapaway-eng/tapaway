@@ -11,7 +11,7 @@ import { supabaseAdmin, userFromToken } from '@/server/supabase';
 // auth.users with ON DELETE CASCADE. A tag counts as registered only while its
 // `tags` row exists, so its hardware is free to register again afterwards;
 // tag_inventory keeps the physical tag and just loses provisioned_by (SET NULL).
-// Pre-orders are keyed by email, not by account, and stay so they can ship.
+// Orders are keyed by email, not by account, and stay so they can ship.
 
 const ratelimit = makeRateLimit('account-delete', 10, '10 m');
 
