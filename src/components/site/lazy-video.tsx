@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef, useState } from "react";
 
 /** Only attaches (and fetches) a video's src once it's about to scroll into view. */

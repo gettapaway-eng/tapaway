@@ -1,13 +1,14 @@
 import { Reveal } from "@/components/site/motion";
 import { Logomark } from "@/components/site/logo";
 import { WaitlistForm } from "@/components/site/waitlist-form";
+import Link from "next/link";
 
 export function Footer() {
   return (
     <footer className="bg-white px-2 py-2 sm:px-4 sm:py-4">
       <div className="relative mx-auto min-h-[420px] overflow-hidden rounded-2xl sm:min-h-[560px]">
         <img
-          src={`${import.meta.env.BASE_URL}footerbg.webp`}
+          src={`/footerbg.webp`}
           alt=""
           loading="lazy"
           decoding="async"
@@ -30,6 +31,13 @@ export function Footer() {
           <WaitlistForm className="mt-8" />
         </Reveal>
       </div>
+      <nav className="mx-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-2 pb-2 pt-5 text-[14px] text-zinc-500 sm:pt-6">
+        <span>© {new Date().getFullYear()} tapaway</span>
+        <span className="flex gap-6">
+          <Link href="/privacy" className="focus-ring rounded hover:text-[var(--ink)]">Privacy</Link>
+          <Link href="/terms" className="focus-ring rounded hover:text-[var(--ink)]">Terms</Link>
+        </span>
+      </nav>
     </footer>
   );
 }

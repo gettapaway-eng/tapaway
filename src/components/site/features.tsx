@@ -45,11 +45,11 @@ export function Features() {
               {card.video ? (
                 <LazyVideo
                   className="h-full w-full object-cover"
-                  src={`${import.meta.env.BASE_URL}${encodeURIComponent(card.video)}`}
+                  src={`/${encodeURIComponent(card.video)}`}
                 />
               ) : (
                 <img
-                  src={`${import.meta.env.BASE_URL}${encodeURIComponent(card.image!)}`}
+                  src={`/${encodeURIComponent(card.image!)}`}
                   alt={card.title}
                   loading="lazy"
                   decoding="async"

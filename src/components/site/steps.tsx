@@ -72,7 +72,7 @@ export function Steps() {
               </span>
               <StepCard title={step.title} description={step.description}>
                 <img
-                  src={`${import.meta.env.BASE_URL}${encodeURIComponent(step.image)}`}
+                  src={`/${encodeURIComponent(step.image)}`}
                   alt={step.title}
                   loading="lazy"
                   decoding="async"
