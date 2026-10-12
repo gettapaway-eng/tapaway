@@ -213,7 +213,7 @@ export default function AccountDelete() {
                 ))}
               </ul>
               <p className="mt-4 text-[13px] leading-relaxed text-zinc-500">
-                Unlock in the app first if a session is running. Pre-orders aren’t affected and will still ship.
+                Unlock in the app first if a session is running. Orders you’ve placed aren’t affected and will still ship.
               </p>
               <HoldButton
                 size="lg"
