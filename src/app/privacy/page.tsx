@@ -3,146 +3,149 @@ import Link from 'next/link';
 import { LegalPage, List, Mail, Section } from '@/components/site/legal';
 
 export const metadata: Metadata = {
-  title: 'Privacy — tapaway',
-  description: 'What tapaway collects in the app and on this website, why, and how to delete it.',
+  title: 'Privacy Policy — tapaway',
+  description: 'How tapaway collects, uses and protects your personal data, and your rights over it.',
   alternates: { canonical: '/privacy' },
 };
+
+const B = ({ children }: { children: string }) => (
+  <strong className="font-semibold text-[var(--ink)]">{children}</strong>
+);
 
 export default function PrivacyPage() {
   return (
     <LegalPage
-      title="Privacy"
-      updated="12 October 2026"
+      title="Privacy Policy"
+      updated="October 12, 2026"
       intro={
         <p>
-          tapaway is run by Aaqif Shafi, an individual based in India (“we”). This page covers the tapaway iPhone app
-          and tapaway.today. The short version: we collect only what the app and your orders need, we don’t track
-          you, we don’t sell or share your data for advertising, and you can delete your account at any time.
+          Welcome to tapaway. We respect your privacy and are committed to protecting your personal data. This policy explains how we look after your
+          data when you use the tapaway iPhone app or visit tapaway.today, and tells you about your privacy rights.
         </p>
       }
     >
-      <Section id="app" title="In the app">
-        <p>To sign in and keep your setup in sync across devices, we store:</p>
+      <Section id="collect" title="Information We Collect">
+        <p>We may collect, use and store the following kinds of personal data:</p>
         <List>
           <li>
-            <strong className="font-semibold text-[var(--ink)]">Your email address</strong>, used to send your
-            sign-in code.
+            <B>Identity Data:</B> your email address and an account ID, used to sign you in.
           </li>
           <li>
-            <strong className="font-semibold text-[var(--ink)]">An account ID</strong> that links your data to you.
+            <B>App Data:</B> the tags you add (their names and the keys that let the app recognise them), your
+            schedules, your settings and your remaining emergency unlocks, synced so your setup works across devices.
           </li>
           <li>
-            <strong className="font-semibold text-[var(--ink)]">Your app setup</strong>: the tags you’ve added (their
-            names and the keys that let the app recognise them), your schedules, your settings, and how many emergency
-            unlocks you have left.
+            <B>Order Data:</B> your name, email, phone number, shipping address, what you ordered and its payment
+            status.
+          </li>
+          <li>
+            <B>Waitlist Data:</B> your email address, if you join the waitlist.
+          </li>
+          <li>
+            <B>Technical Data:</B> your IP address and basic request information, used briefly to keep the service
+            secure and prevent abuse.
           </li>
         </List>
         <p>
-          Some things never leave your iPhone: your focus sessions, your modes, and the apps you choose to block.
-          Apple’s Screen Time doesn’t even tell the app which apps those are. The app has no ads, no third-party
-          analytics and no tracking.
+          Some things never leave your iPhone: your focus sessions, your modes and the apps you choose to block.
+          Apple’s Screen Time doesn’t even tell us which apps those are. We never see or store your card details;
+          payments are handled by our payment provider.
         </p>
-      </Section>
-
-      <Section id="website" title="On this website">
-        <List>
-          <li>
-            <strong className="font-semibold text-[var(--ink)]">Waitlist.</strong> If you join, we keep your email
-            address to tell you when tapaway launches. You can unsubscribe from any email we send.
-          </li>
-          <li>
-            <strong className="font-semibold text-[var(--ink)]">Pre-orders.</strong> To ship your order we keep your
-            name, email, phone number, shipping address, what you ordered and its payment status. Payments are handled
-            by Dodo Payments; we never see or store your card details.
-          </li>
-          <li>
-            <strong className="font-semibold text-[var(--ink)]">Abuse protection.</strong> Your IP address is used
-            briefly to limit how often forms can be submitted.
-          </li>
-        </List>
         <p>
-          The site sets no advertising or analytics cookies. Your browser keeps your cart and checkout progress
-          locally so you don’t lose them on a refresh; that data stays on your device.
+          We don’t use advertising, third-party analytics or tracking in the app or on the website, and the website
+          sets no tracking cookies. Your browser keeps your cart locally on your device so it isn’t lost on a refresh.
         </p>
       </Section>
 
-      <Section id="use" title="How we use it">
-        <p>Only to run tapaway:</p>
+      <Section id="use" title="How We Use Your Information">
+        <p>We use your personal data to:</p>
         <List>
-          <li>signing you in and syncing your setup between devices</li>
-          <li>taking payment for, packing and shipping your order, and keeping you updated about it</li>
-          <li>sending launch news to people on the waitlist</li>
-          <li>answering you when you contact us, and keeping the service secure</li>
-          <li>keeping records the law requires, such as for tax</li>
+          <li>provide and maintain the app and website</li>
+          <li>sign you in and sync your setup between your devices</li>
+          <li>process your payment, and pack, ship and update you about your order</li>
+          <li>email you about launch and updates if you joined the waitlist</li>
+          <li>respond to your support requests</li>
+          <li>detect and prevent fraud or abuse</li>
+          <li>keep records the law requires, such as for tax</li>
         </List>
       </Section>
 
-      <Section id="sharing" title="Who else handles it">
-        <p>We don’t sell personal data. These services process it on our behalf, only as needed to do their job:</p>
-        <List>
-          <li>Supabase: database and sign-in</li>
-          <li>Vercel: website hosting</li>
-          <li>Dodo Payments: payments, as merchant of record</li>
-          <li>AutoSend: waitlist emails</li>
-          <li>Upstash: rate limiting</li>
-          <li>shipping carriers: the name, address and phone number on your order, to deliver it</li>
-        </List>
+      <Section id="sharing" title="Data Sharing">
         <p>
-          Some of these providers store data outside India. We may also disclose information if the law requires it.
+          We do not sell your personal data. We share it only with trusted service providers who help us run tapaway
+          (hosting, database, payments and email) and with shipping carriers, who receive the name, address and phone
+          number on your order to deliver it. They may use your data only to provide their service to us. Some of them
+          store data outside India. We may also disclose information when the law requires it.
         </p>
       </Section>
 
-      <Section id="retention" title="How long we keep it">
+      <Section id="retention" title="Data Retention">
         <List>
           <li>
-            <strong className="font-semibold text-[var(--ink)]">Your account</strong> is kept until you delete it.
-            Deleting it removes your account and app data straight away; copies in our database backups expire
-            shortly after.
+            <B>Account and App Data</B> is kept until you delete your account. Deletion is immediate; copies in our
+            backups expire shortly after.
           </li>
           <li>
-            <strong className="font-semibold text-[var(--ink)]">Orders</strong> are kept for as long as we need them
-            for delivery, support, refunds, and tax and accounting records.
+            <B>Order Data</B> is kept as long as needed for delivery, support, refunds, and tax and accounting
+            records.
           </li>
           <li>
-            <strong className="font-semibold text-[var(--ink)]">Waitlist emails</strong> are kept until launch, or
-            until you unsubscribe or ask us to remove yours.
+            <B>Waitlist Data</B> is kept until launch, or until you unsubscribe or ask us to remove it.
           </li>
         </List>
       </Section>
 
-      <Section id="choices" title="Your choices">
+      <Section id="deletion" title="Deleting Your Account">
         <p>
           You can delete your account at any time from Settings in the app, or at{' '}
           <Link href="/account/delete" className="font-medium text-[var(--ink)] underline underline-offset-4">
             tapaway.today/account/delete
           </Link>
-          . Deleting it removes your tags, schedules and settings, and frees your tags so they can be set up again.
-          Pre-orders aren’t affected.
+          . This permanently removes your account, tags, schedules and settings, and frees your tags so they can be set
+          up again. Orders you’ve placed aren’t affected.
         </p>
+      </Section>
+
+      <Section id="security" title="Data Security">
         <p>
-          To get a copy of your data, correct it, or remove an order or waitlist entry, email <Mail />. We’ll reply
-          within 30 days.
+          We have put appropriate security measures in place to prevent your personal data from being lost, used or
+          accessed without authorisation. Data is encrypted in transit, and access is limited to the people and
+          services that need it to run tapaway. If a breach affects your data, we’ll let you know.
         </p>
       </Section>
 
       <Section id="children" title="Children">
         <p>
-          tapaway isn’t meant for children under 13, and we don’t knowingly collect their data. If you think a child
-          has given us information, email us and we’ll delete it.
+          tapaway is not meant for children under 13, and we don’t knowingly collect their data. If you believe a child
+          has given us personal data, contact us and we’ll delete it.
         </p>
       </Section>
 
-      <Section id="security" title="Security">
+      <Section id="rights" title="Your Rights">
+        <p>You have the right to:</p>
+        <List>
+          <li>access your personal data</li>
+          <li>correct inaccurate data</li>
+          <li>request deletion of your data</li>
+          <li>object to processing of your data</li>
+          <li>request a copy of your data to transfer elsewhere</li>
+          <li>withdraw consent at any time</li>
+        </List>
         <p>
-          Data is encrypted in transit, and access to it is limited to the people and services that run tapaway. No
-          system is perfectly secure, but we work to keep yours safe and will tell you if a breach affects you.
+          To use any of these rights, email <Mail />. We’ll respond within 30 days.
         </p>
       </Section>
 
-      <Section id="changes" title="Changes and contact">
+      <Section id="changes" title="Changes to This Policy">
         <p>
-          If we change this policy, we’ll update the date at the top, and tell you in the app or by email if the change
-          matters. For any question about your privacy, email <Mail />.
+          We may update this policy from time to time. We’ll change the date at the top, and tell you in the app or by
+          email if a change is significant.
+        </p>
+      </Section>
+
+      <Section id="contact" title="Contact Us">
+        <p>
+          If you have any questions about this Privacy Policy, please contact us at <Mail />.
         </p>
       </Section>
     </LegalPage>
