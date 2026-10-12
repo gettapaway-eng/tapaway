@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { shopEnabled } from '@/lib/env';
 import { CheckoutClient } from './checkout-client';
 
 export const metadata: Metadata = {
@@ -7,5 +9,6 @@ export const metadata: Metadata = {
 };
 
 export default function CheckoutPage() {
+  if (!shopEnabled) redirect('/shop');
   return <CheckoutClient />;
 }
