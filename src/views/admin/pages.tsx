@@ -14,7 +14,7 @@ import {
   useInventory,
   usePackedTags,
   useOrders,
-  useReleaseTag,
+  useRemoveTagRegistration,
   useSetProvisioner,
   useUsers,
   type InventoryRow,
@@ -112,7 +112,7 @@ export function TagsPage() {
         <SearchField value={query} onChange={setQuery} placeholder={isAdmin ? 'Search ID, owner, tag name' : 'Search hardware ID'} />
       </Toolbar>
 
-      <DataTable head={['Hardware ID', 'Status', isAdmin ? 'Owner' : 'Registered', 'Provisioned']}>
+      <DataTable head={['Hardware ID', 'Status', isAdmin ? 'Used by' : 'Registered', 'Provisioned']}>
         {inventory.isLoading ? (
           <SkeletonRows columns={4} />
         ) : inventory.error ? (
@@ -123,7 +123,7 @@ export function TagsPage() {
             title={rows.length === 0 ? 'No tags provisioned yet' : 'No tags match'}
             detail={
               rows.length === 0
-                ? 'Provision blank tags from the iOS app: debug menu → Provision blank tags.'
+                ? 'Provision blank tags from the iOS app: Settings → Provisioning.'
                 : 'Try another filter or search.'
             }
           />
@@ -142,14 +142,18 @@ export function TagsPage() {
                   <Pill tone={status.tone}>{status.label}</Pill>
                 </Cell>
                 <Cell>
-                  {isAdmin ? (
+                  {isAdmin && row.registration_count > 0 ? (
                     <>
                       {row.owner_email ?? <span className="text-muted-foreground">—</span>}
-                      {row.tag_name ? <span className="ml-2 text-muted-foreground">{row.tag_name}</span> : null}
+                      {row.registration_count > 1 ? (
+                        <span className="tabular ml-2 text-muted-foreground">+{row.registration_count - 1} more</span>
+                      ) : row.tag_name ? (
+                        <span className="ml-2 text-muted-foreground">{row.tag_name}</span>
+                      ) : null}
                     </>
-                  ) : row.owner_user_id ? (
-                    <span className="text-muted-foreground">
-                      Yes{row.registered_at ? <> · <RelativeTime value={row.registered_at} /></> : null}
+                  ) : row.registration_count > 0 ? (
+                    <span className="tabular text-muted-foreground">
+                      {row.registration_count} account{row.registration_count === 1 ? '' : 's'}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
@@ -223,7 +227,7 @@ function TagInspector({
   packed: PackedTags;
   onClose: () => void;
 }) {
-  const release = useReleaseTag();
+  const removeRegistration = useRemoveTagRegistration();
   const { select } = useAdminNav();
   const orders = useOrders(canManage);
   const status = row ? TAG_STATUS[tagStatus(row, packed)] : null;
@@ -237,41 +241,6 @@ function TagInspector({
       onOpenChange={(open) => !open && onClose()}
       title={<span className="tabular font-mono text-[14px]">{hex}</span>}
       subtitle={status ? <Pill tone={status.tone}>{status.label}</Pill> : null}
-      footer={
-        canManage && row?.owner_user_id ? (
-          <div>
-            <HoldButton
-              size="md"
-              radius={12}
-              holdTime={1200}
-              backgroundColor="color-mix(in oklch, var(--foreground) 6%, var(--background))"
-              textColor="var(--foreground)"
-              fillColor="#e5484d"
-              fillTextColor="#ffffff"
-              glow={false}
-              wave={false}
-              resetAfter={0}
-              doneLabel="Released"
-              doneIcon={<Check className="size-4" />}
-              className="w-full"
-              onHold={() =>
-                release.mutate(row.hardware_id, {
-                  onSuccess: () => {
-                    toast.success('Tag released', { description: `${hex} can be registered by anyone now.` });
-                    onClose();
-                  },
-                  onError: (error) => toast.error("Couldn't release tag", { description: error.message }),
-                })
-              }
-            >
-              Hold to release from {row.owner_email ?? 'owner'}
-            </HoldButton>
-            <p className="type-caption mt-2 text-center text-muted-foreground">
-              Their app stops recognising it. The next person to register it becomes its owner.
-            </p>
-          </div>
-        ) : null
-      }
     >
       {row ? (
         <>
@@ -292,19 +261,69 @@ function TagInspector({
               </DetailRow>
             </DetailGroup>
           ) : null}
-          <DetailGroup title={canManage ? 'Ownership' : 'Registration'}>
-            {canManage ? (
-              <DetailRow label="Owner">{row.owner_email ?? <span className="text-muted-foreground">Nobody</span>}</DetailRow>
-            ) : (
-              <DetailRow label="Registered">{row.owner_user_id ? 'Yes' : 'Not yet'}</DetailRow>
-            )}
-            {canManage && row.tag_name ? <DetailRow label="Named">{row.tag_name}</DetailRow> : null}
-            {row.registered_at ? (
-              <DetailRow label="Last updated">
-                <RelativeTime value={row.registered_at} />
-              </DetailRow>
-            ) : null}
-          </DetailGroup>
+          {canManage ? (
+            <DetailGroup title={`Used by · ${row.registration_count}`}>
+              {row.registrations.length === 0 ? (
+                <div className="px-3.5 py-3 text-muted-foreground">Nobody has registered this tag yet.</div>
+              ) : (
+                row.registrations.map((registration) => (
+                  <div key={registration.user_id} className="flex min-h-12 items-center gap-3 px-3.5 py-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-foreground">{registration.email ?? 'Unknown account'}</p>
+                      <p className="type-caption truncate text-muted-foreground">
+                        {registration.tag_name ? `“${registration.tag_name}” · ` : ''}
+                        <RelativeTime value={registration.updated_at} />
+                      </p>
+                    </div>
+                    <HoldButton
+                      size="sm"
+                      radius={9}
+                      holdTime={1000}
+                      disabled={removeRegistration.isPending}
+                      backgroundColor="color-mix(in oklch, #e5484d 10%, var(--background))"
+                      textColor="#e5484d"
+                      fillColor="#e5484d"
+                      fillTextColor="#ffffff"
+                      glow={false}
+                      wave={false}
+                      resetAfter={0}
+                      doneLabel="Removed"
+                      doneIcon={<Check className="size-3.5" />}
+                      onHold={() =>
+                        removeRegistration.mutate(
+                          { hardwareId: row.hardware_id, userId: registration.user_id },
+                          {
+                            onSuccess: () =>
+                              toast.success('Removed from account', {
+                                description: `${registration.email ?? 'That account'} no longer has ${hex}. Anyone else using it keeps it.`,
+                              }),
+                            onError: (error) => toast.error("Couldn't remove", { description: error.message }),
+                          },
+                        )
+                      }
+                    >
+                      Hold to remove
+                    </HoldButton>
+                  </div>
+                ))
+              )}
+            </DetailGroup>
+          ) : (
+            <DetailGroup title="Registration">
+              <DetailRow label="Accounts using it">{row.registration_count || 'None yet'}</DetailRow>
+              {row.registered_at ? (
+                <DetailRow label="Last registered">
+                  <RelativeTime value={row.registered_at} />
+                </DetailRow>
+              ) : null}
+            </DetailGroup>
+          )}
+          {canManage && row.registration_count > 0 ? (
+            <p className="mt-2 px-1 text-[12px] text-muted-foreground">
+              Tags are shared: anyone holding it can add it to their own account. Removing an account here only
+              affects that account.
+            </p>
+          ) : null}
           <DetailGroup title="Provisioning">
             <DetailRow label="Hardware ID">
               <span className="inline-flex items-center gap-1.5">
@@ -422,7 +441,9 @@ function UserInspector({
   const setProvisioner = useSetProvisioner();
   const inventory = useInventory();
   const { select } = useAdminNav();
-  const ownedTags = (inventory.data ?? []).filter((tag) => row && tag.owner_user_id === row.id);
+  const ownedTags = (inventory.data ?? []).filter(
+    (tag) => row && tag.registrations.some((registration) => registration.user_id === row.id),
+  );
 
   return (
     <Inspector
@@ -483,7 +504,9 @@ function UserInspector({
                   onClick={() => select({ kind: 'tag', id: tag.hardware_id })}
                   className="flex min-h-10 w-full items-center justify-between gap-3 px-3.5 py-2 text-left outline-none hover:bg-accent/60 focus-visible:bg-accent"
                 >
-                  <span>{tag.tag_name ?? 'Unnamed tag'}</span>
+                  <span>
+                    {tag.registrations.find((registration) => registration.user_id === row?.id)?.tag_name ?? 'Unnamed tag'}
+                  </span>
                   <span className="tabular font-mono text-[11.5px] text-muted-foreground">
                     {hardwareIdHex(tag.hardware_id)}
                   </span>

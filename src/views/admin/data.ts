@@ -13,10 +13,22 @@ export interface InventoryRow {
   provisioned_at: string;
   confirmed_at: string | null;
   provisioned_by_email: string | null;
+  /** The most recent registration — kept for compatibility; see `registrations`. */
   owner_user_id: string | null;
   owner_email: string | null;
   tag_name: string | null;
   registered_at: string | null;
+  /** How many accounts have this tag registered (tags are shared). Visible to provisioners. */
+  registration_count: number;
+  /** Every account using the tag, newest first. Empty for provisioners (masked server-side). */
+  registrations: TagRegistration[];
+}
+
+export interface TagRegistration {
+  user_id: string;
+  email: string | null;
+  tag_name: string | null;
+  updated_at: string;
 }
 
 export interface UserRow {
@@ -245,11 +257,18 @@ export function useOrderAction() {
   });
 }
 
-export function useReleaseTag() {
+/**
+ * Removes one account's registration of a tag — tags are shared, so this never touches
+ * anyone else who uses it. The same soft-delete as deleting the tag in the app.
+ */
+export function useRemoveTagRegistration() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (hardwareId: string) => {
-      const { error } = await supabase.rpc('admin_release_tag', { p_hardware_id: hardwareId });
+    mutationFn: async ({ hardwareId, userId }: { hardwareId: string; userId: string }) => {
+      const { error } = await supabase.rpc('admin_remove_tag_registration', {
+        p_hardware_id: hardwareId,
+        p_user_id: userId,
+      });
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
@@ -284,7 +303,7 @@ export type PackedTags = ReadonlyMap<string, string>;
  * "registered" once its new owner sets it up.
  */
 export function tagStatus(row: InventoryRow, packed: PackedTags): TagStatus {
-  if (row.owner_user_id) return 'registered';
+  if (row.registration_count > 0) return 'registered';
   if (packed.has(row.hardware_id)) return 'shipped';
   return row.confirmed_at ? 'available' : 'unconfirmed';
 }
