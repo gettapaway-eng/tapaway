@@ -99,7 +99,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                     return (
                       <PaletteItem
                         key={row.hardware_id}
-                        value={`tag ${hex} ${hex.replaceAll(' ', '')} ${row.owner_email ?? ''} ${row.tag_name ?? ''}`}
+                        value={`tag ${hex} ${hex.replaceAll(' ', '')} ${row.registrations.map((r) => `${r.email ?? ''} ${r.tag_name ?? ''}`).join(' ')}`}
                         onSelect={() => run(() => select({ kind: 'tag', id: row.hardware_id }))}
                       >
                         <Nfc className="size-4 text-muted-foreground" />

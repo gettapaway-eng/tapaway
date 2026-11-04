@@ -33,6 +33,7 @@ const ACTIONS: Record<string, { verb: string; icon: LucideIcon; tone: string; ki
   'waitlist.restored': { verb: 'restored', icon: RotateCcw, tone: 'text-[var(--tint)]', kind: 'waitlist' },
   'waitlist.deleted': { verb: 'deleted for good', icon: Trash2, tone: 'text-red-600', kind: 'waitlist' },
   'tag.released': { verb: 'released tag', icon: Nfc, tone: 'text-amber-500', kind: 'tags' },
+  'tag.registration_removed': { verb: 'removed an account from tag', icon: Nfc, tone: 'text-amber-500', kind: 'tags' },
   'provisioner.added': { verb: 'made a provisioner:', icon: ShieldCheck, tone: 'text-emerald-500', kind: 'permissions' },
   'provisioner.removed': { verb: 'removed provisioner:', icon: ShieldOff, tone: 'text-muted-foreground', kind: 'permissions' },
   'order.confirmed': { verb: 'confirmed pre-order', icon: Check, tone: 'text-[var(--tint)]', kind: 'orders' },
@@ -44,7 +45,7 @@ const ACTIONS: Record<string, { verb: string; icon: LucideIcon; tone: string; ki
 const FALLBACK = { verb: '', icon: Mail, tone: 'text-muted-foreground', kind: 'waitlist' as const };
 
 function describeTarget(row: AuditRow): string {
-  if (row.action === 'tag.released' && row.target) {
+  if ((row.action === 'tag.released' || row.action === 'tag.registration_removed') && row.target) {
     return `${hardwareIdHex(row.target)}${row.detail.owner ? ` from ${row.detail.owner}` : ''}`;
   }
   return row.target ?? '';
@@ -169,7 +170,7 @@ function ActivityRow({ row }: { row: AuditRow }) {
         <span className="block">
           <span className="font-medium">{row.actor_email ?? 'Someone'}</span>{' '}
           <span className="text-muted-foreground">{meta.verb || row.action}</span>{' '}
-          <span className={cn(row.action === 'tag.released' && 'tabular font-mono text-[12px]')}>{describeTarget(row)}</span>
+          <span className={cn(row.action.startsWith('tag.') && 'tabular font-mono text-[12px]')}>{describeTarget(row)}</span>
         </span>
         {expandable && open ? (
           <span className="mt-2 flex flex-wrap gap-1">
